@@ -13,6 +13,7 @@ import PredictionsOverview from "./pages/PredictionsOverview";
 import TradingBought from "./pages/TradingBought";
 import TradingSold from "./pages/TradingSold";
 import Assets from "./pages/Assets";
+import Leverage from "./pages/Leverage";
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="p-4">
@@ -44,10 +45,7 @@ const App = () => (
             path="/spent-profits"
             element={<PlaceholderPage title="Spent & Profits" />}
           />
-          <Route
-            path="/leverage"
-            element={<PlaceholderPage title="Leverage" />}
-          />
+          <Route path="/leverage" element={<Leverage />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

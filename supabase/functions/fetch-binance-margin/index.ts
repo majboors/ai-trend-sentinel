@@ -50,41 +50,44 @@ serve(async (req) => {
     );
 
     if (!response.ok) {
-      if (response.status === 404) {
-        return new Response(JSON.stringify([]), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        });
-      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    const assets: any[] = [];
+    const leverageData = data.assets.map((asset: any) => {
+      const baseAsset = asset.baseAsset;
+      const quoteAsset = asset.quoteAsset;
 
-    // Process isolated margin assets
-    data.assets.forEach((pair: any) => {
-      const baseAsset = pair.baseAsset;
-      const quoteAsset = pair.quoteAsset;
+      // Calculate total assets and debts
+      const totalBaseAsset = parseFloat(baseAsset.borrowed) + parseFloat(baseAsset.free);
+      const totalQuoteAsset = parseFloat(quoteAsset.borrowed) + parseFloat(quoteAsset.free);
+      
+      // Calculate debt and equity
+      const debt = parseFloat(baseAsset.borrowed) + parseFloat(quoteAsset.borrowed);
+      const equity = (parseFloat(baseAsset.free) + parseFloat(quoteAsset.free)) - debt;
+      
+      // Calculate leverage ratio
+      const leverage = equity > 0 ? (debt + equity) / equity : 0;
 
-      if (parseFloat(baseAsset.free) > 0 || parseFloat(baseAsset.locked) > 0) {
-        assets.push({
+      return {
+        symbol: asset.symbol,
+        leverage,
+        debt,
+        equity,
+        baseAsset: {
           asset: baseAsset.asset,
+          borrowed: baseAsset.borrowed,
           free: baseAsset.free,
-          locked: baseAsset.locked,
-        });
-      }
-
-      if (parseFloat(quoteAsset.free) > 0 || parseFloat(quoteAsset.locked) > 0) {
-        assets.push({
+        },
+        quoteAsset: {
           asset: quoteAsset.asset,
+          borrowed: quoteAsset.borrowed,
           free: quoteAsset.free,
-          locked: quoteAsset.locked,
-        });
-      }
+        },
+      };
     });
 
-    return new Response(JSON.stringify(assets), {
+    return new Response(JSON.stringify(leverageData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
