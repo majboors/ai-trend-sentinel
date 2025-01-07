@@ -30,9 +30,18 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
   const { toast } = useToast();
 
   const processTradesData = (trades: PredictionTrade[]) => {
-    if (!trades || trades.length === 0) return [];
+    if (!trades || trades.length === 0) {
+      console.log('No trades to process');
+      return [];
+    }
     
     const filteredTrades = filter ? trades.filter(filter) : trades;
+    console.log('Filtered trades:', filteredTrades);
+    
+    if (filteredTrades.length === 0) {
+      console.log('No trades after filtering');
+      return [];
+    }
     
     // Sort trades by date first
     const sortedTrades = filteredTrades.sort((a, b) => 
@@ -41,15 +50,27 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
     
     // Group trades by date and calculate cumulative value
     const groupedData = sortedTrades.reduce((acc: ChartData[], trade) => {
-      const date = new Date(trade.created_at || '').toLocaleDateString();
+      if (!trade.created_at || !trade.profit_loss) {
+        console.log('Skipping trade due to missing data:', trade);
+        return acc;
+      }
+
+      const date = new Date(trade.created_at).toLocaleDateString();
+      const profitLoss = Number(trade.profit_loss);
+
+      if (isNaN(profitLoss)) {
+        console.log('Invalid profit/loss value:', trade);
+        return acc;
+      }
+
       const existingPoint = acc.find(point => point.date === date);
 
       if (existingPoint) {
-        existingPoint.value += Number(trade.profit_loss || 0);
+        existingPoint.value += profitLoss;
       } else {
         acc.push({
           date,
-          value: Number(trade.profit_loss || 0)
+          value: profitLoss
         });
       }
 
@@ -75,11 +96,21 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
           .select('*')
           .order('created_at', { ascending: true });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching trades:', error);
+          throw error;
+        }
 
-        console.log('Fetched trades:', trades); // Debug log
-        const chartData = processTradesData(trades || []);
-        console.log('Processed chart data:', chartData); // Debug log
+        console.log('Fetched trades:', trades);
+        
+        if (!trades || trades.length === 0) {
+          console.log('No trades found in database');
+          setData([]);
+          return;
+        }
+
+        const chartData = processTradesData(trades);
+        console.log('Processed chart data:', chartData);
         setData(chartData);
       } catch (error) {
         console.error('Error fetching performance data:', error);
@@ -103,7 +134,8 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
           schema: 'public',
           table: 'prediction_trades'
         },
-        async () => {
+        async (payload) => {
+          console.log('Received real-time update:', payload);
           fetchData(); // Refetch data on any changes
         }
       )
@@ -114,7 +146,8 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
     };
   }, [filter, toast]);
 
-  if (data.length === 0) {
+  if (!data || data.length === 0) {
+    console.log('No data available for rendering');
     return (
       <Card className="p-6">
         <h2 className="text-xl font-semibold mb-4">{title}</h2>
