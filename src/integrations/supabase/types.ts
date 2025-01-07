@@ -69,6 +69,95 @@ export type Database = {
         }
         Relationships: []
       }
+      prediction_trades: {
+        Row: {
+          amount: number
+          closed_at: string | null
+          created_at: string | null
+          entry_price: number
+          exit_price: number | null
+          id: string
+          profit_loss: number | null
+          status: string
+          symbol: string
+          type: string
+          user_id: string
+          view_id: string
+        }
+        Insert: {
+          amount: number
+          closed_at?: string | null
+          created_at?: string | null
+          entry_price: number
+          exit_price?: number | null
+          id?: string
+          profit_loss?: number | null
+          status: string
+          symbol: string
+          type: string
+          user_id: string
+          view_id: string
+        }
+        Update: {
+          amount?: number
+          closed_at?: string | null
+          created_at?: string | null
+          entry_price?: number
+          exit_price?: number | null
+          id?: string
+          profit_loss?: number | null
+          status?: string
+          symbol?: string
+          type?: string
+          user_id?: string
+          view_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prediction_trades_view_id_fkey"
+            columns: ["view_id"]
+            isOneToOne: false
+            referencedRelation: "prediction_views"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prediction_views: {
+        Row: {
+          created_at: string | null
+          current_amount: number
+          id: string
+          initial_amount: number
+          name: string
+          start_date: string
+          status: Database["public"]["Enums"]["prediction_status"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_amount?: number
+          id?: string
+          initial_amount: number
+          name: string
+          start_date: string
+          status?: Database["public"]["Enums"]["prediction_status"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_amount?: number
+          id?: string
+          initial_amount?: number
+          name?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["prediction_status"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
@@ -117,6 +206,7 @@ export type Database = {
     }
     Enums: {
       account_type: "spot" | "margin"
+      prediction_status: "active" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
