@@ -50,8 +50,8 @@ serve(async (req) => {
       throw new Error('Missing Binance API credentials')
     }
 
-    // Initialize Supabase client
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey)
+    // Initialize Supabase client with service role key for admin access
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
     
     // Get the authorization header
     const authHeader = req.headers.get('Authorization')
@@ -60,7 +60,7 @@ serve(async (req) => {
     }
 
     // Get the user from the JWT token
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(
       authHeader.replace('Bearer ', '')
     )
 
@@ -104,7 +104,7 @@ serve(async (req) => {
 
     // Store in database
     for (const asset of userAssets) {
-      const { error: upsertError } = await supabaseClient
+      const { error: upsertError } = await supabaseAdmin
         .from('assets')
         .upsert({
           user_id: user.id,
