@@ -2,66 +2,76 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock data - replace with real data later
-const mockCoins = [
-  {
-    id: 1,
-    name: "Bitcoin",
-    symbol: "BTC",
-    profit: true,
-    data: [
-      { time: "00:00", value: 40000 },
-      { time: "04:00", value: 42000 },
-      { time: "08:00", value: 41000 },
-      { time: "12:00", value: 43000 },
-    ],
-  },
-  {
-    id: 2,
-    name: "Ethereum",
-    symbol: "ETH",
-    profit: false,
-    data: [
-      { time: "00:00", value: 2800 },
-      { time: "04:00", value: 2750 },
-      { time: "08:00", value: 2600 },
-      { time: "12:00", value: 2500 },
-    ],
-  },
-];
+interface CoinData {
+  symbol: string;
+  priceChange: number;
+  priceChangePercent: number;
+  lastPrice: number;
+  volume: number;
+  quoteVolume: number;
+  profit: boolean;
+}
 
 interface CoinSplitViewProps {
   filter?: string | null;
 }
 
 export function CoinSplitView({ filter }: CoinSplitViewProps) {
-  const [hoveredCoin, setHoveredCoin] = useState<number | null>(null);
+  const [hoveredCoin, setHoveredCoin] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const filteredCoins = mockCoins.filter((coin) => {
+  const { data: coins = [], isLoading } = useQuery({
+    queryKey: ['coins'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
+
+      const response = await fetch('/functions/v1/fetch-binance-pairs', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch coins');
+      }
+
+      return response.json();
+    },
+    refetchInterval: 30000,
+  });
+
+  const filteredCoins = coins.filter((coin: CoinData) => {
     if (!filter) return true;
     return filter === "profit" ? coin.profit : !coin.profit;
   });
 
-  const profitCoins = filteredCoins.filter((coin) => coin.profit);
-  const lossCoins = filteredCoins.filter((coin) => !coin.profit);
+  const profitCoins = filteredCoins.filter((coin: CoinData) => coin.profit);
+  const lossCoins = filteredCoins.filter((coin: CoinData) => !coin.profit);
 
-  const CoinCard = ({ coin }: { coin: typeof mockCoins[0] }) => (
+  const CoinCard = ({ coin }: { coin: CoinData }) => (
     <Card
       className="p-4 h-[200px] cursor-pointer transition-all hover:shadow-lg"
-      onMouseEnter={() => setHoveredCoin(coin.id)}
+      onMouseEnter={() => setHoveredCoin(coin.symbol)}
       onMouseLeave={() => setHoveredCoin(null)}
-      onClick={() => navigate(`/coins/${coin.id}`)}
+      onClick={() => navigate(`/coins/${coin.symbol}`)}
     >
       <div className="flex justify-between items-start mb-2">
         <div>
-          <h3 className="font-semibold">{coin.name}</h3>
-          <p className="text-sm text-muted-foreground">{coin.symbol}</p>
+          <h3 className="font-semibold">{coin.symbol}</h3>
+          <p className="text-sm text-muted-foreground">
+            ${coin.lastPrice.toFixed(8)}
+          </p>
+        </div>
+        <div className={`text-sm ${coin.profit ? 'text-green-500' : 'text-red-500'}`}>
+          {coin.priceChangePercent.toFixed(2)}%
         </div>
       </div>
 
-      {hoveredCoin === coin.id ? (
+      {hoveredCoin === coin.symbol ? (
         <div
           className={`h-[140px] rounded-lg flex items-center justify-center text-white font-bold text-xl ${
             coin.profit ? "bg-green-500/20" : "bg-red-500/20"
@@ -74,7 +84,10 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
       ) : (
         <div className="h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={coin.data}>
+            <LineChart data={[
+              { time: "24h", value: coin.lastPrice - coin.priceChange },
+              { time: "now", value: coin.lastPrice },
+            ]}>
               <XAxis dataKey="time" hide />
               <YAxis hide />
               <Tooltip />
@@ -91,6 +104,14 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
     </Card>
   );
 
+  if (isLoading) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Loading coins...</p>
+      </div>
+    );
+  }
+
   if (filteredCoins.length === 0) {
     return (
       <div className="text-center py-8">
@@ -103,14 +124,14 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-green-500">Profit</h2>
-        {profitCoins.map((coin) => (
-          <CoinCard key={coin.id} coin={coin} />
+        {profitCoins.map((coin: CoinData) => (
+          <CoinCard key={coin.symbol} coin={coin} />
         ))}
       </div>
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-red-500">Loss</h2>
-        {lossCoins.map((coin) => (
-          <CoinCard key={coin.id} coin={coin} />
+        {lossCoins.map((coin: CoinData) => (
+          <CoinCard key={coin.symbol} coin={coin} />
         ))}
       </div>
     </div>
