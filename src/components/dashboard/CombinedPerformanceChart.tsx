@@ -12,6 +12,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/components/ui/use-toast";
+import { useSearchParams } from "react-router-dom";
 
 type PredictionTrade = Database['public']['Tables']['prediction_trades']['Row'];
 
@@ -28,6 +29,8 @@ interface CombinedPerformanceChartProps {
 export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceChartProps) {
   const [data, setData] = useState<ChartData[]>([]);
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const viewId = searchParams.get('view');
 
   const processTradesData = (trades: PredictionTrade[]) => {
     console.log('Processing trades:', trades);
@@ -37,7 +40,7 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
       return [];
     }
 
-    // Sort trades by date first
+    // Sort trades by date
     const sortedTrades = trades.sort((a, b) => 
       new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime()
     );
@@ -86,11 +89,18 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('Fetching trades data...');
-        const { data: trades, error } = await supabase
+        console.log('Fetching trades data for viewId:', viewId);
+        let query = supabase
           .from('prediction_trades')
           .select('*')
           .order('created_at', { ascending: true });
+
+        // If we have a viewId, filter by it
+        if (viewId) {
+          query = query.eq('view_id', viewId);
+        }
+
+        const { data: trades, error } = await query;
 
         if (error) {
           console.error('Error fetching trades:', error);
@@ -140,7 +150,7 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [filter, toast]);
+  }, [filter, toast, viewId]);
 
   if (!data || data.length === 0) {
     console.log('No data available for rendering');
