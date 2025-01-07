@@ -40,7 +40,9 @@ const menuItems = [
   {
     title: "Predictions",
     icon: LineChart,
+    url: "/predictions",
     items: [
+      { title: "Overview", icon: BarChart3, url: "/predictions" },
       { title: "Profits", icon: BarChart3, url: "/predictions/profits" },
       { title: "Losses", icon: DollarSign, url: "/predictions/losses" },
       { title: "Settings", icon: Settings, url: "/predictions/settings" },
@@ -77,9 +79,18 @@ export function DashboardSidebar() {
                 <SidebarMenuItem key={item.title}>
                   {item.items ? (
                     <>
-                      <SidebarMenuButton>
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                      <SidebarMenuButton asChild={!item.url}>
+                        {item.url ? (
+                          <Link to={item.url} className="flex items-center gap-2">
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        ) : (
+                          <>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </>
+                        )}
                       </SidebarMenuButton>
                       <SidebarMenuSub>
                         {item.items.map((subItem) => (
