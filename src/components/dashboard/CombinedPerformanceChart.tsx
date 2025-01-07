@@ -62,15 +62,10 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
       cumulative += profitLoss;
       console.log(`Date: ${date}, ProfitLoss: ${profitLoss}, Cumulative: ${cumulative}`);
       
-      const existingPoint = acc.find(point => point.date === date);
-      if (existingPoint) {
-        existingPoint.value = Number(cumulative.toFixed(2));
-      } else {
-        acc.push({
-          date,
-          value: Number(cumulative.toFixed(2))
-        });
-      }
+      acc.push({
+        date,
+        value: Number(cumulative.toFixed(2))
+      });
 
       return acc;
     }, []);
@@ -83,10 +78,17 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
     const fetchData = async () => {
       try {
         console.log('Fetching trades data...');
-        const { data: trades, error } = await supabase
+        let query = supabase
           .from('prediction_trades')
           .select('*')
           .order('created_at', { ascending: true });
+
+        // Apply filter if provided
+        if (filter) {
+          query = query.filter('profit_loss', 'lt', 0);
+        }
+
+        const { data: trades, error } = await query;
 
         if (error) {
           console.error('Error fetching trades:', error);
