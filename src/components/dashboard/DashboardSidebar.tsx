@@ -1,96 +1,126 @@
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Wallet,
-  TrendingUp,
-  TrendingDown,
-  Settings,
-  ChartPieIcon,
-  LineChart,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
+} from "@/components/ui/sidebar";
+import {
   BarChart3,
-  ArrowRightLeft,
+  Coins,
+  DollarSign,
+  FolderTree,
+  Home,
+  LineChart,
+  Settings,
+  ShoppingBag,
+  ShoppingCart,
+  ArrowLeftRight,
+  Wallet,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+
+const menuItems = [
+  { title: "Dashboard", icon: Home, url: "/" },
+  {
+    title: "All Coins",
+    icon: FolderTree,
+    url: "/coins",
+    items: [
+      { title: "Profit", icon: BarChart3, url: "/coins?filter=profit" },
+      { title: "Loss", icon: DollarSign, url: "/coins?filter=loss" },
+    ],
+  },
+  {
+    title: "Predictions",
+    icon: LineChart,
+    url: "/predictions",
+    items: [
+      { title: "Overview", icon: BarChart3, url: "/predictions" },
+      { title: "Profits", icon: BarChart3, url: "/predictions/profits" },
+      { title: "Losses", icon: DollarSign, url: "/predictions/losses" },
+      { title: "Settings", icon: Settings, url: "/predictions/settings" },
+    ],
+  },
+  {
+    title: "Trading",
+    icon: ArrowLeftRight,
+    url: "/trading/bought",
+    items: [
+      { title: "Bought", icon: ShoppingCart, url: "/trading/bought" },
+      { title: "Sold", icon: ShoppingBag, url: "/trading/sold" },
+    ],
+  },
+  {
+    title: "Assets",
+    icon: Wallet,
+    url: "/assets",
+    items: [
+      { title: "Overview", icon: BarChart3, url: "/assets" },
+      { title: "Spent/Profits", icon: DollarSign, url: "/spent-profits" },
+      { title: "Leverage", icon: Coins, url: "/leverage" },
+    ],
+  },
+];
 
 export function DashboardSidebar() {
-  const location = useLocation();
-
   return (
-    <ScrollArea className="h-screen w-full border-r bg-background py-6 md:w-64">
-      <div className="flex h-full flex-col gap-4">
-        <div className="flex h-[60px] items-center border-b px-6">
-          <Link className="flex items-center gap-2 font-semibold" to="/">
-            <Wallet className="h-6 w-6" />
-            <span>Trading App</span>
-          </Link>
-        </div>
-        <div className="flex-1 px-4">
-          <div className="space-y-2">
-            <Button
-              asChild
-              variant={location.pathname === "/" ? "secondary" : "ghost"}
-              className="w-full justify-start"
-            >
-              <Link to="/">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                Dashboard
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant={location.pathname === "/assets" ? "secondary" : "ghost"}
-              className="w-full justify-start"
-            >
-              <Link to="/assets">
-                <ChartPieIcon className="mr-2 h-4 w-4" />
-                Assets Overview
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant={location.pathname === "/assets-detailed" ? "secondary" : "ghost"}
-              className="w-full justify-start"
-            >
-              <Link to="/assets-detailed">
-                <LineChart className="mr-2 h-4 w-4" />
-                Assets Analytics
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant={location.pathname === "/trending-up" ? "secondary" : "ghost"}
-              className="w-full justify-start"
-            >
-              <Link to="/trending-up">
-                <TrendingUp className="mr-2 h-4 w-4" />
-                Trending Up
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant={location.pathname === "/trending-down" ? "secondary" : "ghost"}
-              className="w-full justify-start"
-            >
-              <Link to="/trending-down">
-                <TrendingDown className="mr-2 h-4 w-4" />
-                Trending Down
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant={location.pathname === "/settings" ? "secondary" : "ghost"}
-              className="w-full justify-start"
-            >
-              <Link to="/settings">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-    </ScrollArea>
+    <Sidebar>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  {item.items ? (
+                    <>
+                      <SidebarMenuButton asChild={!item.url}>
+                        {item.url ? (
+                          <Link to={item.url} className="flex items-center gap-2">
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        ) : (
+                          <>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </>
+                        )}
+                      </SidebarMenuButton>
+                      <SidebarMenuSub>
+                        {item.items.map((subItem) => (
+                          <SidebarMenuSubItem key={subItem.title}>
+                            <SidebarMenuSubButton asChild>
+                              <Link to={subItem.url} className="flex items-center gap-2">
+                                <subItem.icon className="h-4 w-4" />
+                                <span>{subItem.title}</span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </>
+                  ) : (
+                    <SidebarMenuButton asChild>
+                      <Link to={item.url} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  )}
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
   );
 }
