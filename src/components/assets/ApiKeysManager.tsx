@@ -26,7 +26,10 @@ export const ApiKeysManager = () => {
   const fetchApiKeys = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        setError("You must be logged in to view API keys");
+        return;
+      }
 
       const { data, error } = await supabase
         .from("api_keys")
@@ -70,15 +73,34 @@ export const ApiKeysManager = () => {
         return;
       }
 
-      const { error } = await supabase
+      // Validate API keys are not empty
+      if (!apiKeys.binance_api_key || !apiKeys.binance_api_secret) {
+        setError("Both API key and secret are required");
+        toast({
+          title: "Error",
+          description: "Both API key and secret are required",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log("Attempting to upsert API keys for user:", session.user.id);
+      
+      const { error: upsertError } = await supabase
         .from("api_keys")
         .upsert({
           user_id: session.user.id,
           binance_api_key: apiKeys.binance_api_key,
           binance_api_secret: apiKeys.binance_api_secret,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id'
         });
 
-      if (error) throw error;
+      if (upsertError) {
+        console.error("Error upserting API keys:", upsertError);
+        throw upsertError;
+      }
 
       toast({
         title: "Success",
