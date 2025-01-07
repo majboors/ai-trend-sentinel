@@ -6,6 +6,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { CoinVolatileView } from "./CoinVolatileView";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CoinData {
   symbol: string;
@@ -25,6 +33,7 @@ interface CoinSplitViewProps {
 
 export function CoinSplitView({ filter }: CoinSplitViewProps) {
   const [hoveredCoin, setHoveredCoin] = useState<string | null>(null);
+  const [viewType, setViewType] = useState<string>("profit-loss");
   const navigate = useNavigate();
 
   const { data: coins = [], isLoading, error } = useQuery({
@@ -86,6 +95,10 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
         ))}
       </div>
     );
+  }
+
+  if (viewType === "volatile") {
+    return <CoinVolatileView />;
   }
 
   const filteredCoins = (coins as CoinData[]).filter((coin: CoinData) => {
@@ -159,18 +172,32 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
   );
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-green-500">Profit ({profitCoins.length})</h2>
-        {profitCoins.map((coin: CoinData) => (
-          <CoinCard key={coin.symbol} coin={coin} />
-        ))}
+    <div className="space-y-4">
+      <div className="w-[200px]">
+        <Select value={viewType} onValueChange={setViewType}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select view type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="profit-loss">Profit/Loss View</SelectItem>
+            <SelectItem value="volatile">Volatility View</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-red-500">Loss ({lossCoins.length})</h2>
-        {lossCoins.map((coin: CoinData) => (
-          <CoinCard key={coin.symbol} coin={coin} />
-        ))}
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-green-500">Profit ({profitCoins.length})</h2>
+          {profitCoins.map((coin: CoinData) => (
+            <CoinCard key={coin.symbol} coin={coin} />
+          ))}
+        </div>
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-red-500">Loss ({lossCoins.length})</h2>
+          {lossCoins.map((coin: CoinData) => (
+            <CoinCard key={coin.symbol} coin={coin} />
+          ))}
+        </div>
       </div>
     </div>
   );

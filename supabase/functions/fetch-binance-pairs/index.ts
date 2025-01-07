@@ -67,7 +67,7 @@ serve(async (req) => {
       tickerData.map((ticker: any) => [ticker.symbol, ticker])
     );
 
-    // Process and filter trading pairs
+    // Process and filter trading pairs with volatility calculation
     console.log('Processing trading pairs...');
     const tradingPairs = exchangeInfo.symbols
       .filter((symbol: any) => 
@@ -81,6 +81,12 @@ serve(async (req) => {
           return null;
         }
 
+        // Calculate volatility using high/low price range
+        const highPrice = parseFloat(ticker.highPrice);
+        const lowPrice = parseFloat(ticker.lowPrice);
+        const avgPrice = (highPrice + lowPrice) / 2;
+        const volatility = ((highPrice - lowPrice) / avgPrice) * 100;
+
         return {
           symbol: symbol.symbol,
           baseAsset: symbol.baseAsset,
@@ -90,10 +96,14 @@ serve(async (req) => {
           lastPrice: parseFloat(ticker.lastPrice),
           volume: parseFloat(ticker.volume),
           quoteVolume: parseFloat(ticker.quoteVolume),
-          profit: parseFloat(ticker.priceChangePercent) > 0
+          profit: parseFloat(ticker.priceChangePercent) > 0,
+          volatility: volatility,
+          highPrice: highPrice,
+          lowPrice: lowPrice
         };
       })
-      .filter(Boolean); // Remove null values
+      .filter(Boolean)
+      .sort((a: any, b: any) => b.volatility - a.volatility); // Sort by volatility
 
     console.log(`Found ${tradingPairs.length} active trading pairs`);
     console.log('Sample trading pair:', tradingPairs[0]);
