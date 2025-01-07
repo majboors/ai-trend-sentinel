@@ -9,6 +9,8 @@ import SingleCoin from "./pages/SingleCoin";
 import ProfitPredictions from "./pages/ProfitPredictions";
 import LossPredictions from "./pages/LossPredictions";
 import PredictionSettings from "./pages/PredictionSettings";
+import TradingBought from "./pages/TradingBought";
+import TradingSold from "./pages/TradingSold";
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="p-4">
@@ -32,14 +34,8 @@ const App = () => (
           <Route path="/predictions/profits" element={<ProfitPredictions />} />
           <Route path="/predictions/losses" element={<LossPredictions />} />
           <Route path="/predictions/settings" element={<PredictionSettings />} />
-          <Route
-            path="/trading/bought"
-            element={<PlaceholderPage title="Bought Items" />}
-          />
-          <Route
-            path="/trading/sold"
-            element={<PlaceholderPage title="Sold Items" />}
-          />
+          <Route path="/trading/bought" element={<TradingBought />} />
+          <Route path="/trading/sold" element={<TradingSold />} />
           <Route
             path="/assets"
             element={<PlaceholderPage title="Assets" />}
