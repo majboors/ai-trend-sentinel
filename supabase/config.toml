@@ -1,4 +1,5 @@
 project_id = "ofbypucaiibkpnfwzrlo"
+
 [functions.fetch-binance-spot]
 verify_jwt = true
 region = "ap-southeast-1"

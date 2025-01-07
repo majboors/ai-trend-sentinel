@@ -29,22 +29,32 @@ serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { 
-      headers: { 
-        ...corsHeaders,
-        'Access-Control-Max-Age': '86400',
-      } 
+      headers: corsHeaders
     })
   }
 
   try {
     console.log('Starting Binance spot balance fetch...')
     
-    // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    // Check for required environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const binanceApiKey = Deno.env.get('BINANCE_API_KEY')
+    const binanceApiSecret = Deno.env.get('BINANCE_API_SECRET')
 
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('Missing Supabase credentials')
+      throw new Error('Missing Supabase credentials')
+    }
+
+    if (!binanceApiKey || !binanceApiSecret) {
+      console.error('Missing Binance API credentials')
+      throw new Error('Missing Binance API credentials')
+    }
+
+    // Initialize Supabase client
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey)
+    
     // Get the authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
@@ -63,17 +73,9 @@ serve(async (req) => {
 
     console.log('Authenticated user:', user.id)
 
-    const apiKey = Deno.env.get('BINANCE_API_KEY')
-    const apiSecret = Deno.env.get('BINANCE_API_SECRET')
-
-    if (!apiKey || !apiSecret) {
-      console.error('Missing Binance API credentials')
-      throw new Error('Missing Binance API credentials')
-    }
-
     const timestamp = Date.now()
     const queryString = `timestamp=${timestamp}`
-    const signature = await cryptoSign(queryString, apiSecret)
+    const signature = await cryptoSign(queryString, binanceApiSecret)
 
     console.log('Making request to Binance API...')
     
@@ -81,8 +83,7 @@ serve(async (req) => {
       `https://api.binance.com/api/v3/account?${queryString}&signature=${signature}`,
       {
         headers: {
-          'X-MBX-APIKEY': apiKey,
-          'User-Agent': 'Mozilla/5.0',
+          'X-MBX-APIKEY': binanceApiKey,
         },
       }
     )
