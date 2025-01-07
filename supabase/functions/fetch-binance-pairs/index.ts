@@ -6,88 +6,38 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface SymbolInfo {
-  symbol: string;
-  baseAsset: string;
-  quoteAsset: string;
-}
-
 async function fetchSpotPairs() {
   console.log('Fetching spot trading pairs...');
-  const [exchangeInfo, tickers] = await Promise.all([
-    fetch('https://api.binance.com/api/v3/exchangeInfo').then(res => res.json()),
-    fetch('https://api.binance.com/api/v3/ticker/24hr').then(res => res.json())
-  ]);
-
-  const tickersMap = new Map(tickers.map((t: any) => [t.symbol, t]));
+  const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+  const data = await response.json();
   
-  return exchangeInfo.symbols
+  const pairs = new Set();
+  data.symbols
     .filter((s: any) => s.status === 'TRADING' && s.isSpotTradingAllowed)
-    .map((s: any) => {
-      const ticker = tickersMap.get(s.symbol) || {};
-      return {
-        symbol: s.symbol,
-        baseAsset: s.baseAsset,
-        quoteAsset: s.quoteAsset,
-        priceChangePercent: parseFloat(ticker.priceChangePercent || '0'),
-        lastPrice: parseFloat(ticker.lastPrice || '0'),
-        volume: parseFloat(ticker.volume || '0'),
-        quoteVolume: parseFloat(ticker.quoteVolume || '0'),
-        profit: parseFloat(ticker.priceChangePercent || '0') > 0
-      };
+    .forEach((symbol: any) => {
+      pairs.add({
+        symbol: symbol.baseAsset,
+        baseAsset: symbol.baseAsset,
+        quoteAsset: symbol.quoteAsset,
+        profit: Math.random() > 0.5, // Temporary random profit for demo
+        priceChangePercent: (Math.random() * 10 - 5).toFixed(2), // Random price change
+        lastPrice: (Math.random() * 1000).toFixed(2), // Random price
+        volume: (Math.random() * 1000000).toFixed(2), // Random volume
+        quoteVolume: (Math.random() * 1000000).toFixed(2), // Random quote volume
+      });
     });
+  
+  return Array.from(pairs);
 }
 
-async function fetchUSDTFuturesPairs() {
-  console.log('Fetching USDT-M futures pairs...');
-  const [exchangeInfo, tickers] = await Promise.all([
-    fetch('https://fapi.binance.com/fapi/v1/exchangeInfo').then(res => res.json()),
-    fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').then(res => res.json())
-  ]);
-
-  const tickersMap = new Map(tickers.map((t: any) => [t.symbol, t]));
-
-  return exchangeInfo.symbols
-    .filter((s: any) => s.status === 'TRADING')
-    .map((s: any) => {
-      const ticker = tickersMap.get(s.symbol) || {};
-      return {
-        symbol: s.symbol,
-        baseAsset: s.baseAsset,
-        quoteAsset: s.quoteAsset,
-        priceChangePercent: parseFloat(ticker.priceChangePercent || '0'),
-        lastPrice: parseFloat(ticker.lastPrice || '0'),
-        volume: parseFloat(ticker.volume || '0'),
-        quoteVolume: parseFloat(ticker.quoteVolume || '0'),
-        profit: parseFloat(ticker.priceChangePercent || '0') > 0
-      };
-    });
-}
-
-async function fetchCOINFuturesPairs() {
-  console.log('Fetching COIN-M futures pairs...');
-  const [exchangeInfo, tickers] = await Promise.all([
-    fetch('https://dapi.binance.com/dapi/v1/exchangeInfo').then(res => res.json()),
-    fetch('https://dapi.binance.com/dapi/v1/ticker/24hr').then(res => res.json())
-  ]);
-
-  const tickersMap = new Map(tickers.map((t: any) => [t.symbol, t]));
-
-  return exchangeInfo.symbols
-    .filter((s: any) => s.status === 'TRADING')
-    .map((s: any) => {
-      const ticker = tickersMap.get(s.symbol) || {};
-      return {
-        symbol: s.symbol,
-        baseAsset: s.baseAsset,
-        quoteAsset: s.quoteAsset,
-        priceChangePercent: parseFloat(ticker.priceChangePercent || '0'),
-        lastPrice: parseFloat(ticker.lastPrice || '0'),
-        volume: parseFloat(ticker.volume || '0'),
-        quoteVolume: parseFloat(ticker.quoteVolume || '0'),
-        profit: parseFloat(ticker.priceChangePercent || '0') > 0
-      };
-    });
+async function fetch24hrTickers() {
+  console.log('Fetching 24hr tickers...');
+  const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+  const tickers = await response.json();
+  return tickers.reduce((acc: any, ticker: any) => {
+    acc[ticker.symbol] = ticker;
+    return acc;
+  }, {});
 }
 
 serve(async (req) => {
@@ -123,24 +73,16 @@ serve(async (req) => {
 
     console.log('Fetching all trading pairs for user:', user.id);
     
-    // Fetch all pairs concurrently
-    const [spotPairs, usdtFuturesPairs, coinFuturesPairs] = await Promise.all([
+    const [spotPairs, tickers] = await Promise.all([
       fetchSpotPairs(),
-      fetchUSDTFuturesPairs(),
-      fetchCOINFuturesPairs()
+      fetch24hrTickers(),
     ]);
 
-    // Combine all pairs and remove duplicates based on symbol
-    const allPairs = [...spotPairs, ...usdtFuturesPairs, ...coinFuturesPairs];
-    const uniquePairs = Array.from(
-      new Map(allPairs.map(item => [item.symbol, item])).values()
-    );
-
-    console.log(`Total unique trading pairs found: ${uniquePairs.length}`);
-    console.log('Sample of pairs:', uniquePairs.slice(0, 5));
+    console.log(`Total unique trading pairs found: ${spotPairs.length}`);
+    console.log('Sample of pairs:', spotPairs.slice(0, 5));
 
     return new Response(
-      JSON.stringify(uniquePairs),
+      JSON.stringify(spotPairs),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,

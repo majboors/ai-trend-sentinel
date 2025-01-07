@@ -81,13 +81,13 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
     >
       <div className="flex justify-between items-start mb-2">
         <div>
-          <h3 className="font-semibold">{coin.baseAsset}/{coin.quoteAsset}</h3>
+          <h3 className="font-semibold">{coin.baseAsset}</h3>
           <p className="text-sm text-muted-foreground">
-            ${coin.lastPrice.toFixed(8)}
+            ${parseFloat(coin.lastPrice.toString()).toFixed(8)}
           </p>
         </div>
         <div className={`text-sm ${coin.profit ? 'text-green-500' : 'text-red-500'}`}>
-          {coin.priceChangePercent.toFixed(2)}%
+          {parseFloat(coin.priceChangePercent.toString()).toFixed(2)}%
         </div>
       </div>
 
@@ -105,8 +105,8 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
         <div className="h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={[
-              { time: "24h", value: coin.lastPrice - (coin.lastPrice * coin.priceChangePercent / 100) },
-              { time: "now", value: coin.lastPrice },
+              { time: "24h", value: parseFloat(coin.lastPrice.toString()) - (parseFloat(coin.lastPrice.toString()) * parseFloat(coin.priceChangePercent.toString()) / 100) },
+              { time: "now", value: parseFloat(coin.lastPrice.toString()) },
             ]}>
               <XAxis dataKey="time" hide />
               <YAxis hide />
