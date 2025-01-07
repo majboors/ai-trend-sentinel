@@ -21,28 +21,34 @@ const cryptoSign = async (message: string, secret: string): Promise<string> => {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
+    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
+    // Get the authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      throw new Error('No auth header')
+      throw new Error('Missing authorization header')
     }
 
+    // Get the user from the JWT token
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
       authHeader.replace('Bearer ', '')
     )
 
     if (userError || !user) {
-      throw userError || new Error('No user found')
+      throw userError || new Error('User not found')
     }
+
+    console.log('Authenticated user:', user.id)
 
     const apiKey = Deno.env.get('BINANCE_API_KEY')
     const apiSecret = Deno.env.get('BINANCE_API_SECRET')
@@ -64,6 +70,12 @@ serve(async (req) => {
       }
     )
 
+    if (!response.ok) {
+      const errorData = await response.text()
+      console.error('Binance API error:', errorData)
+      throw new Error(`Binance API error: ${errorData}`)
+    }
+
     const data = await response.json()
 
     // Store balances in the database
@@ -72,7 +84,7 @@ serve(async (req) => {
     )
 
     for (const asset of userAssets) {
-      await supabaseClient
+      const { error: upsertError } = await supabaseClient
         .from('assets')
         .upsert({
           user_id: user.id,
@@ -83,6 +95,10 @@ serve(async (req) => {
         }, {
           onConflict: 'user_id,symbol,account_type'
         })
+
+      if (upsertError) {
+        console.error('Error upserting balance:', upsertError)
+      }
     }
 
     return new Response(
@@ -93,6 +109,7 @@ serve(async (req) => {
       },
     )
   } catch (error) {
+    console.error('Function error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       {
