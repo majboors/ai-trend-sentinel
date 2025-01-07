@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 import {
   LineChart,
   Line,
@@ -22,6 +23,8 @@ type TimeInterval = "15m" | "1h" | "4h" | "1d";
 const SingleCoin = () => {
   const { id } = useParams();
   const [interval, setInterval] = useState<TimeInterval>("1h");
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const { data: klines = [], isLoading } = useQuery({
     queryKey: ['klines', id, interval],
@@ -45,13 +48,69 @@ const SingleCoin = () => {
         low: parseFloat(item[3]),
         close: parseFloat(item[4]),
         volume: parseFloat(item[5]),
-        ma7: 0, // We'll calculate these after getting the data
+        ma7: 0,
         ma25: 0,
         ma99: 0,
       }));
     },
     refetchInterval: 30000,
   });
+
+  const handleSaveTrade = async () => {
+    try {
+      const latestPrice = klines[klines.length - 1]?.close;
+      if (!latestPrice || !id) {
+        toast({
+          title: "Error",
+          description: "No price data available",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "Please login to save trades",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('prediction_trades')
+        .insert([
+          {
+            user_id: session.user.id,
+            symbol: id,
+            entry_price: latestPrice,
+            amount: 1, // Default amount, you might want to make this configurable
+            type: 'BUY',
+            status: 'OPEN'
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Trade saved successfully",
+      });
+
+      // Navigate to predictions overview to see the saved trade
+      navigate('/predictions');
+    } catch (error) {
+      console.error('Error saving trade:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save trade",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Calculate moving averages
   const calculateMA = (data: any[], period: number) => {
@@ -76,9 +135,17 @@ const SingleCoin = () => {
         <main className="flex-1 p-4 md:p-8">
           <div className="container mx-auto max-w-7xl">
             <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl md:text-3xl font-bold">
-                {id}
-              </h1>
+              <div className="flex items-center gap-4">
+                <h1 className="text-2xl md:text-3xl font-bold">
+                  {id}
+                </h1>
+                <Button
+                  onClick={handleSaveTrade}
+                  className="bg-green-500 hover:bg-green-600"
+                >
+                  Save Trade
+                </Button>
+              </div>
               <div className="flex gap-2">
                 {(['15m', '1h', '4h', '1d'] as TimeInterval[]).map((t) => (
                   <Button
