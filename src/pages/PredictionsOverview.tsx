@@ -89,7 +89,7 @@ export default function PredictionsOverview() {
                 <ProfitLossCard
                   title="Active Predictions"
                   value={views.filter(v => v.status === 'active').length}
-                  isCount
+                  percentage={0}
                 />
               </div>
 

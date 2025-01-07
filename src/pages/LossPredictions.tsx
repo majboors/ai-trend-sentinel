@@ -31,7 +31,6 @@ export default function LossPredictions() {
 
   const fetchViewData = async () => {
     try {
-      // Fetch view details
       const { data: viewData, error: viewError } = await supabase
         .from('prediction_views')
         .select('*')
@@ -41,12 +40,12 @@ export default function LossPredictions() {
       if (viewError) throw viewError;
       setView(viewData);
 
-      // Fetch trades for this view
+      // Only fetch loss trades
       const { data: tradesData, error: tradesError } = await supabase
         .from('prediction_trades')
         .select('*')
         .eq('view_id', viewId)
-        .eq('profit_loss', '<', 0)
+        .lt('profit_loss', 0)
         .order('created_at', { ascending: false });
 
       if (tradesError) throw tradesError;
@@ -102,7 +101,7 @@ export default function LossPredictions() {
                 <ProfitLossCard
                   title="Loss Trades"
                   value={trades.length}
-                  isCount
+                  percentage={0}
                 />
               </div>
 

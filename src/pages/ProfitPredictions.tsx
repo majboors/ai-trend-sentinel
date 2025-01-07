@@ -31,7 +31,6 @@ export default function ProfitPredictions() {
 
   const fetchViewData = async () => {
     try {
-      // Fetch view details
       const { data: viewData, error: viewError } = await supabase
         .from('prediction_views')
         .select('*')
@@ -41,11 +40,12 @@ export default function ProfitPredictions() {
       if (viewError) throw viewError;
       setView(viewData);
 
-      // Fetch trades for this view
+      // Only fetch profitable trades
       const { data: tradesData, error: tradesError } = await supabase
         .from('prediction_trades')
         .select('*')
         .eq('view_id', viewId)
+        .gt('profit_loss', 0)
         .order('created_at', { ascending: false });
 
       if (tradesError) throw tradesError;
@@ -62,8 +62,8 @@ export default function ProfitPredictions() {
 
   if (!view) return null;
 
-  const profitLoss = Number(view.current_amount) - Number(view.initial_amount);
-  const profitLossPercentage = (profitLoss / Number(view.initial_amount)) * 100;
+  const totalProfit = trades.reduce((sum, trade) => sum + Number(trade.profit_loss || 0), 0);
+  const profitPercentage = (totalProfit / Number(view.initial_amount)) * 100;
 
   return (
     <SidebarProvider>
@@ -73,7 +73,7 @@ export default function ProfitPredictions() {
           <div className="container mx-auto max-w-7xl">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold">{view.name}</h1>
+                <h1 className="text-2xl md:text-3xl font-bold">{view.name} - Profits</h1>
                 <p className="text-muted-foreground">
                   Started on {new Date(view.start_date).toLocaleDateString()}
                 </p>
@@ -94,19 +94,19 @@ export default function ProfitPredictions() {
                   percentage={0}
                 />
                 <ProfitLossCard
-                  title="Current Value"
-                  value={Number(view.current_amount)}
-                  percentage={profitLossPercentage}
+                  title="Total Profits"
+                  value={totalProfit}
+                  percentage={profitPercentage}
                 />
                 <ProfitLossCard
-                  title="Total Trades"
+                  title="Profitable Trades"
                   value={trades.length}
-                  isCount
+                  percentage={0}
                 />
               </div>
 
               <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Performance Chart</h2>
+                <h2 className="text-xl font-semibold mb-4">Profit Performance</h2>
                 <PerformanceChart />
               </Card>
             </div>
