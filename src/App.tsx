@@ -63,22 +63,6 @@ const App = () => (
             path="/leverage"
             element={<PlaceholderPage title="Leverage" />}
           />
-          <Route
-            path="/coin/analysis"
-            element={<PlaceholderPage title="Technical Analysis" />}
-          />
-          <Route
-            path="/coin/sentiment"
-            element={<PlaceholderPage title="Coin Sentiment" />}
-          />
-          <Route
-            path="/coin/strategies"
-            element={<PlaceholderPage title="Trading Strategies" />}
-          />
-          <Route
-            path="/coin/whales"
-            element={<PlaceholderPage title="Whales Activity" />}
-          />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

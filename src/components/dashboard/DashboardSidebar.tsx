@@ -25,10 +25,6 @@ import {
   TrendingDown,
   TrendingUp,
   Wallet,
-  Brain,
-  Users,
-  Smile,
-  ChevronDown,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -57,27 +53,23 @@ const menuItems = [
           { title: "Settings", icon: Settings, url: "/predictions/settings" },
         ],
       },
-    ],
-  },
-  {
-    title: "Trading",
-    icon: ArrowLeftRight,
-    items: [
-      { title: "Bought", icon: ShoppingCart, url: "/trading/bought" },
-      { title: "Sold", icon: ShoppingBag, url: "/trading/sold" },
-    ],
-  },
-  { title: "Assets", icon: Wallet, url: "/assets" },
-  { title: "Spent/Profits", icon: DollarSign, url: "/spent-profits" },
-  { title: "Leverage", icon: Coins, url: "/leverage" },
-  {
-    title: "Single Coin",
-    icon: BarChart3,
-    items: [
-      { title: "Technical Analysis", icon: LineChart, url: "/coin/analysis" },
-      { title: "Sentiment", icon: Smile, url: "/coin/sentiment" },
-      { title: "Strategies", icon: Brain, url: "/coin/strategies" },
-      { title: "Whales", icon: Users, url: "/coin/whales" },
+      {
+        title: "Trading",
+        icon: ArrowLeftRight,
+        items: [
+          { title: "Bought", icon: ShoppingCart, url: "/trading/bought" },
+          { title: "Sold", icon: ShoppingBag, url: "/trading/sold" },
+        ],
+      },
+      {
+        title: "Assets",
+        icon: Wallet,
+        items: [
+          { title: "Overview", icon: BarChart3, url: "/assets" },
+          { title: "Spent/Profits", icon: DollarSign, url: "/spent-profits" },
+          { title: "Leverage", icon: Coins, url: "/leverage" },
+        ],
+      },
     ],
   },
 ];
@@ -146,7 +138,7 @@ export function DashboardSidebar() {
                                   </CollapsibleContent>
                                 </Collapsible>
                               </SidebarMenuItem>
-                            ) : (
+            ) : (
                               <SidebarMenuItem key={subItem.title}>
                                 <SidebarMenuSubButton asChild>
                                   <Link
