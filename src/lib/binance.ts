@@ -23,7 +23,7 @@ export async function fetchBinanceBalances() {
     if (!session) throw new Error('No authenticated session found');
     if (!session.access_token) throw new Error('No access token found in session');
 
-    console.log('Fetching spot balances...');
+    console.log('Fetching spot balances with user ID:', session.user.id);
     const { data: spotBalances, error: spotError } = await supabase.functions.invoke(
       'fetch-binance-spot',
       {
@@ -37,6 +37,8 @@ export async function fetchBinanceBalances() {
       console.error('Spot balance error:', spotError);
       throw spotError;
     }
+
+    console.log('Spot balances received:', spotBalances);
 
     console.log('Fetching margin balances...');
     const { data: marginBalances, error: marginError } = await supabase.functions.invoke(
@@ -52,6 +54,8 @@ export async function fetchBinanceBalances() {
       console.error('Margin balance error:', marginError);
       throw marginError;
     }
+
+    console.log('Margin balances received:', marginBalances);
     
     return {
       spot: spotBalances,

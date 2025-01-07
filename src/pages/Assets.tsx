@@ -25,6 +25,8 @@ const Assets = () => {
           variant: "destructive",
         });
         navigate("/");
+      } else {
+        console.log("Authenticated user ID:", session.user.id);
       }
     };
     checkAuth();
@@ -37,10 +39,13 @@ const Assets = () => {
         console.log('Starting asset fetch...');
         
         // First, fetch from Binance API and update database
-        await fetchBinanceBalances();
-        console.log('Binance balances fetched and stored');
+        const binanceData = await fetchBinanceBalances();
+        console.log('Binance balances fetched:', binanceData);
         
         // Then fetch from our database
+        const { data: session } = await supabase.auth.getSession();
+        console.log('Current session user ID:', session?.user?.id);
+        
         const { data, error } = await supabase
           .from("assets")
           .select("*")
@@ -52,11 +57,11 @@ const Assets = () => {
         }
 
         if (!data) {
-          console.log("No assets found");
+          console.log("No assets found in database");
           return [];
         }
 
-        console.log("Successfully fetched assets:", data);
+        console.log("Successfully fetched assets from database:", data);
         return data;
       } catch (error) {
         console.error("Error fetching assets:", error);
@@ -73,6 +78,9 @@ const Assets = () => {
 
   const spotAssets = assets?.filter((asset) => asset.account_type === "spot") || [];
   const marginAssets = assets?.filter((asset) => asset.account_type === "margin") || [];
+
+  console.log("Filtered spot assets:", spotAssets);
+  console.log("Filtered margin assets:", marginAssets);
 
   if (error) {
     return (
