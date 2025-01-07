@@ -30,6 +30,8 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
   const { toast } = useToast();
 
   const processTradesData = (trades: PredictionTrade[]) => {
+    console.log('Processing trades:', trades);
+    
     if (!trades || trades.length === 0) {
       console.log('No trades to process');
       return [];
@@ -39,6 +41,7 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
     const sortedTrades = trades.sort((a, b) => 
       new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime()
     );
+    console.log('Sorted trades:', sortedTrades);
 
     // Group trades by date and calculate cumulative value
     let cumulative = 0;
@@ -57,6 +60,7 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
       }
 
       cumulative += profitLoss;
+      console.log(`Date: ${date}, ProfitLoss: ${profitLoss}, Cumulative: ${cumulative}`);
       
       const existingPoint = acc.find(point => point.date === date);
       if (existingPoint) {
@@ -71,13 +75,14 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
       return acc;
     }, []);
 
-    console.log('Processed chart data:', groupedData);
+    console.log('Final processed chart data:', groupedData);
     return groupedData;
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('Fetching trades data...');
         const { data: trades, error } = await supabase
           .from('prediction_trades')
           .select('*')
@@ -88,7 +93,7 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
           throw error;
         }
 
-        console.log('Fetched trades:', trades);
+        console.log('Raw trades data:', trades);
         
         if (!trades || trades.length === 0) {
           console.log('No trades found in database');
