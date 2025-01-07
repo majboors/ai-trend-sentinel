@@ -28,7 +28,12 @@ const cryptoSign = async (message: string, secret: string): Promise<string> => {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { 
+      headers: { 
+        ...corsHeaders,
+        'Access-Control-Max-Age': '86400',
+      } 
+    })
   }
 
   try {
@@ -52,6 +57,7 @@ serve(async (req) => {
     )
 
     if (userError || !user) {
+      console.error('User authentication error:', userError)
       throw userError || new Error('User not found')
     }
 
@@ -61,6 +67,7 @@ serve(async (req) => {
     const apiSecret = Deno.env.get('BINANCE_API_SECRET')
 
     if (!apiKey || !apiSecret) {
+      console.error('Missing Binance API credentials')
       throw new Error('Missing Binance API credentials')
     }
 
@@ -75,7 +82,7 @@ serve(async (req) => {
       {
         headers: {
           'X-MBX-APIKEY': apiKey,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          'User-Agent': 'Mozilla/5.0',
         },
       }
     )
@@ -89,36 +96,20 @@ serve(async (req) => {
     const data = await response.json()
     console.log('Successfully received Binance response')
 
-    // Filter and store balances
+    // Filter and return balances
     const balances = data.balances.filter((balance: any) => 
       parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0
     )
 
     console.log(`Found ${balances.length} non-zero balances`)
 
-    // Store in database
-    for (const balance of balances) {
-      const { error: upsertError } = await supabaseClient
-        .from('assets')
-        .upsert({
-          user_id: user.id,
-          symbol: balance.asset,
-          free: balance.free,
-          locked: balance.locked,
-          account_type: 'spot',
-        }, {
-          onConflict: 'user_id,symbol,account_type'
-        })
-
-      if (upsertError) {
-        console.error('Error upserting balance:', upsertError)
-      }
-    }
-
     return new Response(
       JSON.stringify(balances),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+        },
         status: 200,
       },
     )
@@ -131,7 +122,7 @@ serve(async (req) => {
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       },
     )
   }
