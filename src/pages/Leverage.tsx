@@ -143,9 +143,15 @@ const Leverage = () => {
                         {leverageData.map((item) => (
                           <TableRow key={item.symbol}>
                             <TableCell className="font-medium">{item.symbol}</TableCell>
-                            <TableCell className="text-right">{item.leverage.toFixed(2)}x</TableCell>
-                            <TableCell className="text-right">{item.debt.toFixed(8)}</TableCell>
-                            <TableCell className="text-right">{item.equity.toFixed(8)}</TableCell>
+                            <TableCell className="text-right">
+                              {typeof item.leverage === 'number' ? `${item.leverage.toFixed(2)}x` : 'N/A'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {typeof item.debt === 'number' ? item.debt.toFixed(8) : 'N/A'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {typeof item.equity === 'number' ? item.equity.toFixed(8) : 'N/A'}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

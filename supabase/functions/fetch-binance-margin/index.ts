@@ -54,10 +54,12 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    
+    // Transform the data to include calculated leverage values
     const leverageData = data.assets.map((asset: any) => {
       const baseAsset = asset.baseAsset;
       const quoteAsset = asset.quoteAsset;
-
+      
       // Calculate total assets and debts
       const totalBaseAsset = parseFloat(baseAsset.borrowed) + parseFloat(baseAsset.free);
       const totalQuoteAsset = parseFloat(quoteAsset.borrowed) + parseFloat(quoteAsset.free);
@@ -66,14 +68,14 @@ serve(async (req) => {
       const debt = parseFloat(baseAsset.borrowed) + parseFloat(quoteAsset.borrowed);
       const equity = (parseFloat(baseAsset.free) + parseFloat(quoteAsset.free)) - debt;
       
-      // Calculate leverage ratio
-      const leverage = equity > 0 ? (debt + equity) / equity : 0;
+      // Calculate leverage ratio (ensure it's a number)
+      const leverageRatio = equity > 0 ? (debt + equity) / equity : 0;
 
       return {
         symbol: asset.symbol,
-        leverage,
-        debt,
-        equity,
+        leverage: leverageRatio,
+        debt: debt,
+        equity: equity,
         baseAsset: {
           asset: baseAsset.asset,
           borrowed: baseAsset.borrowed,
