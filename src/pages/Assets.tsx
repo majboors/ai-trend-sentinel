@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -10,10 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AssetsTable } from "@/components/assets/AssetsTable";
 import { ApiKeysManager } from "@/components/assets/ApiKeysManager";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const Assets = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [hasApiKeys, setHasApiKeys] = useState<boolean | null>(null);
 
   // Check authentication status
   useEffect(() => {
@@ -31,9 +34,34 @@ const Assets = () => {
     checkAuth();
   }, [navigate, toast]);
 
+  // Check if user has API keys
+  useEffect(() => {
+    const checkApiKeys = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase
+        .from("api_keys")
+        .select("binance_api_key")
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error checking API keys:", error);
+        return;
+      }
+
+      setHasApiKeys(!!data?.binance_api_key);
+    };
+
+    checkApiKeys();
+  }, []);
+
   const { data: assets, isLoading, error } = useQuery({
     queryKey: ["assets"],
     queryFn: async () => {
+      if (!hasApiKeys) return [];
+      
       try {
         console.log('Starting asset fetch...');
         
@@ -64,14 +92,10 @@ const Assets = () => {
         return data || [];
       } catch (error) {
         console.error("Error fetching assets:", error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch assets. Please try again later.",
-          variant: "destructive",
-        });
         throw error;
       }
     },
+    enabled: hasApiKeys === true, // Only run query if API keys exist
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
@@ -91,7 +115,10 @@ const Assets = () => {
               </div>
               <Card>
                 <CardContent className="pt-6">
-                  <p className="text-destructive">Failed to load assets. Please try refreshing the page.</p>
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>Failed to load assets. Please try refreshing the page.</AlertDescription>
+                  </Alert>
                 </CardContent>
               </Card>
             </div>
@@ -116,34 +143,43 @@ const Assets = () => {
               <ApiKeysManager />
             </div>
 
-            <Tabs defaultValue="spot" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="spot">Spot Account</TabsTrigger>
-                <TabsTrigger value="margin">Margin Account</TabsTrigger>
-              </TabsList>
+            {!hasApiKeys ? (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Please add your Binance API keys above to view your assets.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Tabs defaultValue="spot" className="space-y-4">
+                <TabsList>
+                  <TabsTrigger value="spot">Spot Account</TabsTrigger>
+                  <TabsTrigger value="margin">Margin Account</TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="spot">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Spot Assets</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <AssetsTable assets={spotAssets} isLoading={isLoading} />
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                <TabsContent value="spot">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Spot Assets</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <AssetsTable assets={spotAssets} isLoading={isLoading} />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-              <TabsContent value="margin">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Margin Assets</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <AssetsTable assets={marginAssets} isLoading={isLoading} />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                <TabsContent value="margin">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Margin Assets</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <AssetsTable assets={marginAssets} isLoading={isLoading} />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            )}
           </div>
         </main>
       </div>
