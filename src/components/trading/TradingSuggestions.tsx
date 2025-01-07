@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Play } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { MarketSentiment } from "@/components/dashboard/MarketSentiment";
+import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Coin {
   id: string;
@@ -40,6 +44,9 @@ export function TradingSuggestions() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [boughtCoins, setBoughtCoins] = useState<Coin[]>([]);
   const [soldCoins, setSoldCoins] = useState<Coin[]>([]);
+  const [isBuyDialogOpen, setIsBuyDialogOpen] = useState(false);
+  const [margin, setMargin] = useState("");
+  const [stopLoss, setStopLoss] = useState("");
   const { toast } = useToast();
 
   const progress = (currentIndex / mockCoins.length) * 100;
@@ -67,6 +74,15 @@ export function TradingSuggestions() {
         description: "You've reviewed all available coins.",
       });
     }
+  };
+
+  const handleBuy = () => {
+    toast({
+      title: "Purchase Successful",
+      description: `Bought ${currentCoin.name} with ${margin}% margin and ${stopLoss}% stop loss`,
+    });
+    setIsBuyDialogOpen(false);
+    handleNext();
   };
 
   if (!started) {
@@ -101,6 +117,10 @@ export function TradingSuggestions() {
             </div>
           </div>
 
+          <div className="h-[300px]">
+            <PerformanceChart />
+          </div>
+
           <MarketSentiment />
 
           <div className="space-y-2">
@@ -116,13 +136,59 @@ export function TradingSuggestions() {
             </p>
           </div>
 
-          <div className="flex justify-end">
-            <Button onClick={handleNext} className="gap-2">
+          <div className="flex justify-end gap-2">
+            {currentCoin.strategy === "buy" && (
+              <Button onClick={() => setIsBuyDialogOpen(true)} variant="default">
+                Buy
+              </Button>
+            )}
+            <Button onClick={handleNext} variant="outline" className="gap-2">
               Next <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
         </Card>
       )}
+
+      <Dialog open={isBuyDialogOpen} onOpenChange={setIsBuyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Buy {currentCoin?.name}</DialogTitle>
+            <DialogDescription>
+              Set your margin and stop loss parameters
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="margin">Margin (%)</Label>
+              <Input
+                id="margin"
+                type="number"
+                value={margin}
+                onChange={(e) => setMargin(e.target.value)}
+                placeholder="Enter margin percentage"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stopLoss">Stop Loss (%)</Label>
+              <Input
+                id="stopLoss"
+                type="number"
+                value={stopLoss}
+                onChange={(e) => setStopLoss(e.target.value)}
+                placeholder="Enter stop loss percentage"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsBuyDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBuy}>
+              Confirm Purchase
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
