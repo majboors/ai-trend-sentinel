@@ -9,71 +9,122 @@ import { ProfitLossCard } from "@/components/dashboard/ProfitLossCard";
 import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useQuery } from "@tanstack/react-query";
 
 type PredictionView = Database['public']['Tables']['prediction_views']['Row'];
 type PredictionTrade = Database['public']['Tables']['prediction_trades']['Row'];
+
+interface CoinProfit {
+  symbol: string;
+  initialPrice: number;
+  currentPrice: number;
+  potentialProfit: number;
+  profitPercentage: number;
+}
 
 export default function ProfitPredictions() {
   const [searchParams] = useSearchParams();
   const viewId = searchParams.get('view');
   const [view, setView] = useState<PredictionView | null>(null);
-  const [trades, setTrades] = useState<PredictionTrade[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const { data: viewData } = useQuery({
+    queryKey: ['prediction-view', viewId],
+    queryFn: async () => {
+      if (!viewId) return null;
+      const { data, error } = await supabase
+        .from('prediction_views')
+        .select('*')
+        .eq('id', viewId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!viewId,
+  });
+
+  const { data: coinProfits = [] } = useQuery({
+    queryKey: ['coin-profits', viewId],
+    queryFn: async () => {
+      console.log('Fetching coin profits...');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
+
+      const response = await supabase.functions.invoke('fetch-binance-pairs', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) throw response.error;
+
+      const coins = response.data;
+      if (!viewData) return [];
+
+      // Calculate potential profit for each coin based on initial investment
+      const profits: CoinProfit[] = coins.map((coin: any) => {
+        const initialInvestment = Number(viewData.initial_amount);
+        const currentPrice = parseFloat(coin.lastPrice);
+        const priceChange = parseFloat(coin.priceChangePercent);
+        const initialPrice = currentPrice / (1 + priceChange / 100);
+        
+        // Calculate how many coins could have been bought
+        const coinsAmount = initialInvestment / initialPrice;
+        
+        // Calculate current value and profit
+        const currentValue = coinsAmount * currentPrice;
+        const potentialProfit = currentValue - initialInvestment;
+        const profitPercentage = (potentialProfit / initialInvestment) * 100;
+
+        return {
+          symbol: coin.symbol,
+          initialPrice,
+          currentPrice,
+          potentialProfit,
+          profitPercentage,
+        };
+      });
+
+      // Sort by profit in descending order
+      return profits.sort((a, b) => b.potentialProfit - a.potentialProfit);
+    },
+    enabled: !!viewData,
+  });
 
   useEffect(() => {
     if (!viewId) {
       navigate('/predictions');
       return;
     }
-    fetchViewData();
-  }, [viewId, navigate]);
-
-  const fetchViewData = async () => {
-    try {
-      const { data: viewData, error: viewError } = await supabase
-        .from('prediction_views')
-        .select('*')
-        .eq('id', viewId)
-        .single();
-
-      if (viewError) throw viewError;
+    if (viewData) {
       setView(viewData);
-
-      // Only fetch profitable trades
-      const { data: tradesData, error: tradesError } = await supabase
-        .from('prediction_trades')
-        .select('*')
-        .eq('view_id', viewId)
-        .gt('profit_loss', 0)
-        .order('created_at', { ascending: false });
-
-      if (tradesError) throw tradesError;
-      setTrades(tradesData || []);
-    } catch (error) {
-      console.error('Error fetching view data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch prediction data",
-        variant: "destructive",
-      });
     }
-  };
+  }, [viewId, navigate, viewData]);
 
   if (!view) return null;
 
-  const totalProfit = trades.reduce((sum, trade) => sum + Number(trade.profit_loss || 0), 0);
-  const profitPercentage = (totalProfit / Number(view.initial_amount)) * 100;
+  const totalProfit = coinProfits.reduce((sum, coin) => sum + coin.potentialProfit, 0);
+  const averageProfitPercentage = coinProfits.reduce((sum, coin) => sum + coin.profitPercentage, 0) / coinProfits.length;
 
   return (
     <SidebarProvider>
       <div className="flex h-screen">
         <DashboardSidebar />
-        <main className="flex-1 p-4 md:p-8">
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto">
           <div className="container mx-auto max-w-7xl">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold">{view.name} - Profits</h1>
+                <h1 className="text-2xl md:text-3xl font-bold">{view.name} - Profits Analysis</h1>
                 <p className="text-muted-foreground">
                   Started on {new Date(view.start_date).toLocaleDateString()}
                 </p>
@@ -94,16 +145,52 @@ export default function ProfitPredictions() {
                   percentage={0}
                 />
                 <ProfitLossCard
-                  title="Total Profits"
+                  title="Potential Total Profits"
                   value={totalProfit}
-                  percentage={profitPercentage}
+                  percentage={averageProfitPercentage}
                 />
                 <ProfitLossCard
-                  title="Profitable Trades"
-                  value={trades.length}
+                  title="Profitable Coins"
+                  value={coinProfits.filter(coin => coin.potentialProfit > 0).length}
                   percentage={0}
                 />
               </div>
+
+              <Card className="p-6">
+                <h2 className="text-xl font-semibold mb-4">Coins Profit Analysis</h2>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Symbol</TableHead>
+                        <TableHead>Initial Price</TableHead>
+                        <TableHead>Current Price</TableHead>
+                        <TableHead>Potential Profit</TableHead>
+                        <TableHead>Profit %</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {coinProfits.map((coin) => (
+                        <TableRow
+                          key={coin.symbol}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/coins/${coin.symbol}`)}
+                        >
+                          <TableCell className="font-medium">{coin.symbol}</TableCell>
+                          <TableCell>${coin.initialPrice.toFixed(8)}</TableCell>
+                          <TableCell>${coin.currentPrice.toFixed(8)}</TableCell>
+                          <TableCell className={coin.potentialProfit >= 0 ? "text-green-500" : "text-red-500"}>
+                            ${Math.abs(coin.potentialProfit).toFixed(2)}
+                          </TableCell>
+                          <TableCell className={coin.profitPercentage >= 0 ? "text-green-500" : "text-red-500"}>
+                            {coin.profitPercentage.toFixed(2)}%
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
 
               <Card className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Profit Performance</h2>
