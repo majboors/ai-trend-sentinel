@@ -10,7 +10,6 @@ serve(async (req) => {
   }
 
   try {
-    // Create a Supabase client with the Auth context of the logged in user
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
@@ -21,11 +20,11 @@ serve(async (req) => {
       }
     );
 
-    // Get the user's API keys
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
+      console.log("No authenticated user found");
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error: "Authentication required" }),
         { 
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -41,9 +40,9 @@ serve(async (req) => {
       .maybeSingle();
 
     if (apiKeysError) {
-      console.error("Error fetching API keys:", apiKeysError);
+      console.error("Database error fetching API keys:", apiKeysError);
       return new Response(
-        JSON.stringify({ error: "Failed to fetch API keys" }),
+        JSON.stringify({ error: "Failed to fetch API keys from database" }),
         { 
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -54,7 +53,10 @@ serve(async (req) => {
     if (!apiKeys) {
       console.log("No API keys found for user:", user.id);
       return new Response(
-        JSON.stringify({ error: "No API keys found. Please add your Binance API keys in the settings." }),
+        JSON.stringify({ 
+          error: "No API keys found",
+          message: "Please add your Binance API keys in the settings"
+        }),
         { 
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -62,7 +64,6 @@ serve(async (req) => {
       );
     }
 
-    // Fetch spot account information from Binance
     const timestamp = Date.now();
     const queryString = `timestamp=${timestamp}`;
     const signature = await createHmac(apiKeys.binance_api_secret, queryString);
@@ -78,17 +79,32 @@ serve(async (req) => {
     );
 
     if (!response.ok) {
-      console.error("Binance API error:", response.status, await response.text());
+      const responseText = await response.text();
+      console.error("Binance API error:", response.status, responseText);
+      
       if (response.status === 401) {
         return new Response(
-          JSON.stringify({ error: "Invalid API keys. Please check your Binance API keys." }),
+          JSON.stringify({ 
+            error: "Invalid API keys",
+            message: "Please check your Binance API keys"
+          }),
           { 
             status: 401,
             headers: { ...corsHeaders, "Content-Type": "application/json" }
           }
         );
       }
-      throw new Error(`HTTP error! status: ${response.status}`);
+
+      return new Response(
+        JSON.stringify({ 
+          error: "Binance API error",
+          message: `HTTP error! status: ${response.status}`
+        }),
+        { 
+          status: response.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
 
     const data = await response.json();
@@ -98,14 +114,20 @@ serve(async (req) => {
     );
 
     console.log("Successfully fetched spot balances");
-    return new Response(JSON.stringify(balances), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify(balances),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
   } catch (error) {
     console.error("Error in fetch-binance-spot:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: "Internal server error",
+        message: error.message 
+      }),
       { 
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }

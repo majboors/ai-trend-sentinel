@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, KeyIcon, AlertCircleIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ApiKeys {
   binance_api_key: string;
@@ -16,6 +17,7 @@ export const ApiKeysManager = () => {
   const { toast } = useToast();
   const [showSecrets, setShowSecrets] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKeys>({
     binance_api_key: "",
     binance_api_secret: "",
@@ -32,17 +34,19 @@ export const ApiKeysManager = () => {
         .eq('user_id', session.user.id)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching API keys:", error);
+        setError("Failed to fetch API keys");
+        return;
+      }
+
       if (data) {
         setApiKeys(data);
+        setError(null);
       }
     } catch (error) {
       console.error("Error fetching API keys:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch API keys. Please try again.",
-        variant: "destructive",
-      });
+      setError("Failed to fetch API keys");
     }
   };
 
@@ -53,6 +57,7 @@ export const ApiKeysManager = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -80,10 +85,11 @@ export const ApiKeysManager = () => {
         description: "API keys updated successfully",
       });
       
-      // Refresh the assets data after updating keys
+      // Refresh the page to reload assets with new keys
       window.location.reload();
     } catch (error) {
       console.error("Error updating API keys:", error);
+      setError("Failed to update API keys");
       toast({
         title: "Error",
         description: "Failed to update API keys",
@@ -97,41 +103,47 @@ export const ApiKeysManager = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>API Keys</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <KeyIcon className="h-5 w-5" />
+          API Keys
+        </CardTitle>
         <CardDescription>
           Manage your Binance API keys. These keys are required to fetch your account data.
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="apiKey">API Key</Label>
-            <div className="flex space-x-2">
-              <Input
-                id="apiKey"
-                type={showSecrets ? "text" : "password"}
-                value={apiKeys.binance_api_key}
-                onChange={(e) =>
-                  setApiKeys({ ...apiKeys, binance_api_key: e.target.value })
-                }
-                placeholder="Enter your Binance API key"
-              />
-            </div>
+            <Input
+              id="apiKey"
+              type={showSecrets ? "text" : "password"}
+              value={apiKeys.binance_api_key}
+              onChange={(e) =>
+                setApiKeys({ ...apiKeys, binance_api_key: e.target.value })
+              }
+              placeholder="Enter your Binance API key"
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="apiSecret">API Secret</Label>
-            <div className="flex space-x-2">
-              <Input
-                id="apiSecret"
-                type={showSecrets ? "text" : "password"}
-                value={apiKeys.binance_api_secret}
-                onChange={(e) =>
-                  setApiKeys({ ...apiKeys, binance_api_secret: e.target.value })
-                }
-                placeholder="Enter your Binance API secret"
-              />
-            </div>
+            <Input
+              id="apiSecret"
+              type={showSecrets ? "text" : "password"}
+              value={apiKeys.binance_api_secret}
+              onChange={(e) =>
+                setApiKeys({ ...apiKeys, binance_api_secret: e.target.value })
+              }
+              placeholder="Enter your Binance API secret"
+            />
           </div>
 
           <div className="flex justify-between">
