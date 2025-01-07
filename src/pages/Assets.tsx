@@ -1,26 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchBinanceBalances } from "@/lib/binance";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AssetsTable } from "@/components/assets/AssetsTable";
-import { AssetsOverview } from "@/components/assets/AssetsOverview";
 import { ApiKeysManager } from "@/components/assets/ApiKeysManager";
+import { AssetValueCards } from "@/components/assets/AssetValueCards";
+import { AssetProfitChart } from "@/components/assets/AssetProfitChart";
+import { AssetDistributionChart } from "@/components/assets/AssetDistributionChart";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
-import { Area, AreaChart, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip } from "recharts";
+import { AlertCircle } from "lucide-react";
 
 const Assets = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [hasApiKeys, setHasApiKeys] = useState<boolean | null>(null);
-
+  
   // Check authentication status
   useEffect(() => {
     const checkAuth = async () => {
@@ -37,34 +34,10 @@ const Assets = () => {
     checkAuth();
   }, [navigate, toast]);
 
-  // Check if user has API keys
-  useEffect(() => {
-    const checkApiKeys = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const { data, error } = await supabase
-        .from("api_keys")
-        .select("binance_api_key")
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Error checking API keys:", error);
-        return;
-      }
-
-      setHasApiKeys(!!data?.binance_api_key);
-    };
-
-    checkApiKeys();
-  }, []);
-
-  const { data: assets, isLoading, error } = useQuery({
+  // Fetch assets data
+  const { data: assets = [], isLoading, error } = useQuery({
     queryKey: ["assets"],
     queryFn: async () => {
-      if (!hasApiKeys) return [];
-      
       try {
         const binanceData = await fetchBinanceBalances();
         const { data: { session } } = await supabase.auth.getSession();
@@ -83,7 +56,6 @@ const Assets = () => {
         throw error;
       }
     },
-    enabled: hasApiKeys === true,
     refetchInterval: 30000,
   });
 
@@ -103,25 +75,17 @@ const Assets = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: hasApiKeys === true,
   });
 
-  const spotAssets = assets?.filter((asset) => asset.account_type === "spot") || [];
-  const marginAssets = assets?.filter((asset) => asset.account_type === "margin") || [];
+  const spotAssets = assets.filter((asset) => asset.account_type === "spot");
+  const marginAssets = assets.filter((asset) => asset.account_type === "margin");
 
-  // Calculate total portfolio value and changes
   const calculateTotalValue = (assets: any[]) => {
     return assets.reduce((total, asset) => total + (asset.free + asset.locked), 0);
   };
 
   const totalSpotValue = calculateTotalValue(spotAssets);
   const totalMarginValue = calculateTotalValue(marginAssets);
-
-  // Prepare data for profit/loss chart
-  const profitData = transactions.map((trade) => ({
-    date: new Date(trade.timestamp).toLocaleDateString(),
-    value: trade.type === 'SELL' ? (trade.price * trade.amount) : -(trade.price * trade.amount)
-  }));
 
   if (error) {
     return (
@@ -160,84 +124,25 @@ const Assets = () => {
               <ApiKeysManager />
             </div>
 
-            {!hasApiKeys ? (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Please add your Binance API keys above to view your assets.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Total Spot Value</CardTitle>
-                      <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{totalSpotValue.toFixed(2)}</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Total Margin Value</CardTitle>
-                      <ArrowDownRight className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{totalMarginValue.toFixed(2)}</div>
-                    </CardContent>
-                  </Card>
-                </div>
+            <AssetValueCards
+              totalSpotValue={totalSpotValue}
+              totalMarginValue={totalMarginValue}
+            />
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Profit/Loss History</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={profitData}>
-                          <XAxis dataKey="date" />
-                          <YAxis />
-                          <Tooltip />
-                          <Line type="monotone" dataKey="value" stroke="#22c55e" />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+            <AssetProfitChart transactions={transactions} />
 
-                <Tabs defaultValue="spot" className="space-y-4">
-                  <TabsList>
-                    <TabsTrigger value="spot">Spot Account</TabsTrigger>
-                    <TabsTrigger value="margin">Margin Account</TabsTrigger>
-                  </TabsList>
+            <div className="grid gap-6 md:grid-cols-2">
+              <AssetDistributionChart
+                assets={spotAssets}
+                title="Spot Assets Distribution"
+              />
+              <AssetDistributionChart
+                assets={marginAssets}
+                title="Margin Assets Distribution"
+              />
+            </div>
 
-                  <TabsContent value="spot">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Spot Assets</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <AssetsTable assets={spotAssets} isLoading={isLoading} />
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  <TabsContent value="margin">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Margin Assets</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <AssetsTable assets={marginAssets} isLoading={isLoading} />
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
-              </>
-            )}
+            <AssetsTable assets={assets} isLoading={isLoading} />
           </div>
         </main>
       </div>
