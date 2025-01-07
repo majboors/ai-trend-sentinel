@@ -60,16 +60,6 @@ export function DashboardSidebar() {
             </Button>
             <Button
               asChild
-              variant={location.pathname === "/settings" ? "secondary" : "ghost"}
-              className="w-full justify-start"
-            >
-              <Link to="/settings">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Link>
-            </Button>
-            <Button
-              asChild
               variant={location.pathname === "/trending-up" ? "secondary" : "ghost"}
               className="w-full justify-start"
             >
@@ -86,6 +76,16 @@ export function DashboardSidebar() {
               <Link to="/trending-down">
                 <TrendingDown className="mr-2 h-4 w-4" />
                 Trending Down
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant={location.pathname === "/settings" ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <Link to="/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
               </Link>
             </Button>
           </div>
