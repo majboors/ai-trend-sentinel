@@ -20,10 +20,15 @@ serve(async (req) => {
     )
 
     // Get the user from the request
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('No authorization header')
+    }
+
     const {
       data: { user },
       error: userError,
-    } = await supabaseClient.auth.getUser(req.headers.get('Authorization')!)
+    } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''))
 
     if (userError || !user) {
       console.error('Authentication error:', userError)
