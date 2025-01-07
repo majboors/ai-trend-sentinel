@@ -28,8 +28,11 @@ import {
   Brain,
   Users,
   Smile,
+  ChevronDown,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from "react";
 
 const menuItems = [
   {
@@ -80,6 +83,15 @@ const menuItems = [
 ];
 
 export function DashboardSidebar() {
+  const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>({});
+
+  const toggleSection = (title: string) => {
+    setOpenSections(prev => ({
+      ...prev,
+      [title]: !prev[title]
+    }));
+  };
+
   return (
     <Sidebar>
       <SidebarContent>
@@ -90,51 +102,67 @@ export function DashboardSidebar() {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   {item.items ? (
-                    <>
-                      <SidebarMenuButton className="flex items-center gap-2">
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                      </SidebarMenuButton>
-                      <SidebarMenuSub>
-                        {item.items.map((subItem) =>
-                          subItem.items ? (
-                            <SidebarMenuItem key={subItem.title}>
-                              <SidebarMenuButton className="flex items-center gap-2">
-                                <subItem.icon className="h-4 w-4" />
-                                <span>{subItem.title}</span>
-                              </SidebarMenuButton>
-                              <SidebarMenuSub>
-                                {subItem.items.map((subSubItem) => (
-                                  <SidebarMenuItem key={subSubItem.title}>
-                                    <SidebarMenuSubButton asChild>
-                                      <Link
-                                        to={subSubItem.url}
-                                        className="flex items-center gap-2"
-                                      >
-                                        <subSubItem.icon className="h-4 w-4" />
-                                        <span>{subSubItem.title}</span>
-                                      </Link>
-                                    </SidebarMenuSubButton>
-                                  </SidebarMenuItem>
-                                ))}
-                              </SidebarMenuSub>
-                            </SidebarMenuItem>
-                          ) : (
-                            <SidebarMenuItem key={subItem.title}>
-                              <SidebarMenuSubButton asChild>
-                                <Link
-                                  to={subItem.url}
-                                  className="flex items-center gap-2"
-                                >
-                                  <subItem.icon className="h-4 w-4" />
-                                  <span>{subItem.title}</span>
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuItem>
-                          )
-                        )}
-                      </SidebarMenuSub>
-                    </>
+                    <Collapsible open={openSections[item.title]} onOpenChange={() => toggleSection(item.title)}>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton className="w-full flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </div>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${openSections[item.title] ? 'transform rotate-180' : ''}`} />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {item.items.map((subItem) =>
+                            subItem.items ? (
+                              <SidebarMenuItem key={subItem.title}>
+                                <Collapsible open={openSections[subItem.title]} onOpenChange={() => toggleSection(subItem.title)}>
+                                  <CollapsibleTrigger asChild>
+                                    <SidebarMenuButton className="w-full flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <subItem.icon className="h-4 w-4" />
+                                        <span>{subItem.title}</span>
+                                      </div>
+                                      <ChevronDown className={`h-4 w-4 transition-transform ${openSections[subItem.title] ? 'transform rotate-180' : ''}`} />
+                                    </SidebarMenuButton>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent>
+                                    <SidebarMenuSub>
+                                      {subItem.items.map((subSubItem) => (
+                                        <SidebarMenuItem key={subSubItem.title}>
+                                          <SidebarMenuSubButton asChild>
+                                            <Link
+                                              to={subSubItem.url}
+                                              className="flex items-center gap-2"
+                                            >
+                                              <subSubItem.icon className="h-4 w-4" />
+                                              <span>{subSubItem.title}</span>
+                                            </Link>
+                                          </SidebarMenuSubButton>
+                                        </SidebarMenuItem>
+                                      ))}
+                                    </SidebarMenuSub>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              </SidebarMenuItem>
+                            ) : (
+                              <SidebarMenuItem key={subItem.title}>
+                                <SidebarMenuSubButton asChild>
+                                  <Link
+                                    to={subItem.url}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <subItem.icon className="h-4 w-4" />
+                                    <span>{subItem.title}</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuItem>
+                            )
+                          )}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </Collapsible>
                   ) : (
                     <SidebarMenuButton asChild>
                       <Link to={item.url} className="flex items-center gap-2">
