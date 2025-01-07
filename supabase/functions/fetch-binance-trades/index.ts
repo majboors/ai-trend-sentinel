@@ -2,14 +2,16 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-console.log("Hello from fetch-binance-trades!");
+console.log("Starting fetch-binance-trades function");
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
@@ -20,9 +22,15 @@ serve(async (req) => {
       }
     );
 
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) throw new Error("No user found");
+    // Get the user
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      throw new Error("User not authenticated");
+    }
 
+    console.log("Fetching API keys for user:", user.id);
+
+    // Get user's API keys
     const { data: apiKeys, error: apiKeysError } = await supabaseClient
       .from("api_keys")
       .select("binance_api_key, binance_api_secret")
@@ -33,9 +41,15 @@ serve(async (req) => {
       throw new Error("No API keys found");
     }
 
-    // Fetch isolated margin account first to get all pairs
-    const accountResponse = await fetch(
-      `https://api.binance.com/sapi/v1/margin/isolated/account?timestamp=${Date.now()}`,
+    console.log("Fetching isolated margin account details");
+
+    // Fetch isolated margin account details
+    const timestamp = Date.now();
+    const queryString = `timestamp=${timestamp}`;
+    const signature = await createHmac(apiKeys.binance_api_secret, queryString);
+
+    const marginResponse = await fetch(
+      `https://api.binance.com/sapi/v1/margin/isolated/account?${queryString}&signature=${signature}`,
       {
         headers: {
           "X-MBX-APIKEY": apiKeys.binance_api_key,
@@ -43,22 +57,24 @@ serve(async (req) => {
       }
     );
 
-    if (!accountResponse.ok) {
-      throw new Error(`HTTP error! status: ${accountResponse.status}`);
+    if (!marginResponse.ok) {
+      throw new Error(`Binance API error: ${marginResponse.statusText}`);
     }
 
-    const accountData = await accountResponse.json();
+    const marginData = await marginResponse.json();
     const allTrades = [];
 
-    // Fetch trades for each pair
-    for (const asset of accountData.assets) {
+    // Fetch trades for each isolated margin pair
+    for (const asset of marginData.assets) {
       const symbol = asset.symbol;
-      const timestamp = Date.now();
-      const queryString = `symbol=${symbol}&isIsolated=TRUE&timestamp=${timestamp}`;
-      const signature = await createHmac(apiKeys.binance_api_secret, queryString);
+      console.log(`Fetching trades for ${symbol}`);
 
-      const response = await fetch(
-        `https://api.binance.com/sapi/v1/margin/myTrades?${queryString}&signature=${signature}`,
+      const tradeTimestamp = Date.now();
+      const tradeQueryString = `symbol=${symbol}&isIsolated=TRUE&timestamp=${tradeTimestamp}`;
+      const tradeSignature = await createHmac(apiKeys.binance_api_secret, tradeQueryString);
+
+      const tradesResponse = await fetch(
+        `https://api.binance.com/sapi/v1/margin/myTrades?${tradeQueryString}&signature=${tradeSignature}`,
         {
           headers: {
             "X-MBX-APIKEY": apiKeys.binance_api_key,
@@ -66,25 +82,37 @@ serve(async (req) => {
         }
       );
 
-      if (!response.ok) {
-        console.error(`Failed to fetch trades for ${symbol}: ${response.status}`);
+      if (!tradesResponse.ok) {
+        console.error(`Failed to fetch trades for ${symbol}: ${tradesResponse.statusText}`);
         continue;
       }
 
-      const trades = await response.json();
-      allTrades.push(...trades.map((trade: any) => ({
-        ...trade,
-        symbol,
+      const trades = await tradesResponse.json();
+      
+      // Process each trade
+      const processedTrades = trades.map((trade: any) => ({
+        id: trade.id,
+        symbol: trade.symbol,
+        price: trade.price,
+        qty: trade.qty,
+        commission: trade.commission,
+        commissionAsset: trade.commissionAsset,
+        time: trade.time,
+        isBuyer: trade.isBuyer,
         profit: calculateProfit(trade),
-      })));
+      }));
+
+      allTrades.push(...processedTrades);
     }
+
+    console.log(`Successfully fetched ${allTrades.length} trades`);
 
     return new Response(JSON.stringify(allTrades), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error in fetch-binance-trades:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
@@ -101,6 +129,8 @@ function calculateProfit(trade: any) {
   const tradeValue = price * qty;
   
   // Calculate profit/loss including commission
+  // For buys, it's negative (money spent)
+  // For sells, it's positive (money received)
   return trade.isBuyer ? -(tradeValue + commission) : (tradeValue - commission);
 }
 
