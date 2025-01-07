@@ -34,34 +34,21 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
       console.log('No trades to process');
       return [];
     }
-    
-    // Ensure all trades have required fields before processing
-    const validTrades = trades.filter(trade => {
-      if (!trade.created_at || trade.profit_loss === null || trade.profit_loss === undefined) {
-        console.log('Invalid trade data:', trade);
-        return false;
-      }
-      return true;
-    });
-    
-    console.log('Valid trades to process:', validTrades);
-    
-    const filteredTrades = filter ? validTrades.filter(filter) : validTrades;
-    console.log('Filtered trades:', filteredTrades);
-    
-    if (filteredTrades.length === 0) {
-      console.log('No trades after filtering');
-      return [];
-    }
-    
+
     // Sort trades by date first
-    const sortedTrades = filteredTrades.sort((a, b) => 
+    const sortedTrades = trades.sort((a, b) => 
       new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime()
     );
-    
+
     // Group trades by date and calculate cumulative value
+    let cumulative = 0;
     const groupedData = sortedTrades.reduce((acc: ChartData[], trade) => {
-      const date = new Date(trade.created_at!).toLocaleDateString();
+      if (!trade.created_at || trade.profit_loss === null || trade.profit_loss === undefined) {
+        console.log('Invalid trade data:', trade);
+        return acc;
+      }
+
+      const date = new Date(trade.created_at).toLocaleDateString();
       const profitLoss = Number(trade.profit_loss);
 
       if (isNaN(profitLoss)) {
@@ -69,29 +56,23 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
         return acc;
       }
 
+      cumulative += profitLoss;
+      
       const existingPoint = acc.find(point => point.date === date);
-
       if (existingPoint) {
-        existingPoint.value += profitLoss;
+        existingPoint.value = Number(cumulative.toFixed(2));
       } else {
         acc.push({
           date,
-          value: profitLoss
+          value: Number(cumulative.toFixed(2))
         });
       }
 
       return acc;
     }, []);
 
-    // Calculate cumulative values
-    let cumulative = 0;
-    return groupedData.map(point => {
-      cumulative += point.value;
-      return {
-        date: point.date,
-        value: Number(cumulative.toFixed(2))
-      };
-    });
+    console.log('Processed chart data:', groupedData);
+    return groupedData;
   };
 
   useEffect(() => {
@@ -115,8 +96,11 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
           return;
         }
 
-        const chartData = processTradesData(trades);
-        console.log('Processed chart data:', chartData);
+        const filteredTrades = filter ? trades.filter(filter) : trades;
+        console.log('Filtered trades:', filteredTrades);
+
+        const chartData = processTradesData(filteredTrades);
+        console.log('Final chart data:', chartData);
         setData(chartData);
       } catch (error) {
         console.error('Error fetching performance data:', error);
@@ -152,7 +136,6 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
     };
   }, [filter, toast]);
 
-  // Only show no data message if we really have no data
   if (!data || data.length === 0) {
     console.log('No data available for rendering');
     return (
