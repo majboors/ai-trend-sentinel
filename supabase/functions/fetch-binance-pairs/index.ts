@@ -1,10 +1,11 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -40,13 +41,13 @@ serve(async (req) => {
     console.log('Fetching trading pairs for user:', user.id);
     
     // Fetch exchange information from Binance
-    const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
-    if (!response.ok) {
-      throw new Error(`Failed to fetch exchange info: ${response.statusText}`);
+    const exchangeInfoResponse = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+    if (!exchangeInfoResponse.ok) {
+      throw new Error(`Failed to fetch exchange info: ${exchangeInfoResponse.statusText}`);
     }
-    const data = await response.json();
+    const exchangeInfo = await exchangeInfoResponse.json();
     
-    // Fetch 24hr ticker price change
+    // Fetch 24hr ticker price changes
     const tickerResponse = await fetch('https://api.binance.com/api/v3/ticker/24hr');
     if (!tickerResponse.ok) {
       throw new Error(`Failed to fetch ticker data: ${tickerResponse.statusText}`);
@@ -58,29 +59,31 @@ serve(async (req) => {
       tickerData.map((ticker: any) => [ticker.symbol, ticker])
     );
 
-    // Process trading pairs
-    const tradingPairs = data.symbols
+    // Process and filter trading pairs
+    const tradingPairs = exchangeInfo.symbols
       .filter((symbol: any) => 
         symbol.status === 'TRADING' && 
         symbol.isSpotTradingAllowed
       )
       .map((symbol: any) => {
         const ticker = tickerMap.get(symbol.symbol);
+        if (!ticker) return null;
+
         return {
           symbol: symbol.symbol,
           baseAsset: symbol.baseAsset,
           quoteAsset: symbol.quoteAsset,
-          priceChange: ticker ? parseFloat(ticker.priceChange) : 0,
-          priceChangePercent: ticker ? parseFloat(ticker.priceChangePercent) : 0,
-          lastPrice: ticker ? parseFloat(ticker.lastPrice) : 0,
-          volume: ticker ? parseFloat(ticker.volume) : 0,
-          quoteVolume: ticker ? parseFloat(ticker.quoteVolume) : 0,
-          profit: ticker ? parseFloat(ticker.priceChangePercent) > 0 : false
+          priceChange: parseFloat(ticker.priceChange),
+          priceChangePercent: parseFloat(ticker.priceChangePercent),
+          lastPrice: parseFloat(ticker.lastPrice),
+          volume: parseFloat(ticker.volume),
+          quoteVolume: parseFloat(ticker.quoteVolume),
+          profit: parseFloat(ticker.priceChangePercent) > 0
         };
-      });
+      })
+      .filter(Boolean); // Remove null values
 
-    console.log(`Found ${tradingPairs.length} trading pairs`);
-    console.log('Sample pairs:', tradingPairs.slice(0, 5));
+    console.log(`Found ${tradingPairs.length} active trading pairs`);
 
     return new Response(
       JSON.stringify(tradingPairs),

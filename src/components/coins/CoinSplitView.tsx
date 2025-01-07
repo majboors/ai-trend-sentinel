@@ -34,20 +34,19 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
       if (!session) throw new Error('No session');
 
       console.log('Fetching trading pairs...');
-      const response = await fetch('/functions/v1/fetch-binance-pairs', {
+      const response = await supabase.functions.invoke('fetch-binance-pairs', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch coins');
+      if (!response.error) {
+        console.log(`Successfully fetched ${response.data.length} trading pairs`);
+        return response.data;
+      } else {
+        console.error('Error fetching trading pairs:', response.error);
+        throw new Error(response.error.message || 'Failed to fetch coins');
       }
-
-      const data = await response.json();
-      console.log(`Fetched ${data.length} trading pairs`);
-      return data;
     },
     refetchInterval: 30000,
     meta: {
