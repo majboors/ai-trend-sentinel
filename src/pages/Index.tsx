@@ -1,11 +1,50 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ProfitLossCard } from "@/components/dashboard/ProfitLossCard";
 import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
 import { MarketSentiment } from "@/components/dashboard/MarketSentiment";
 import { WhalesActivity } from "@/components/dashboard/WhalesActivity";
+import { Auth } from "@supabase/auth-ui-react";
+import { ThemeSupa } from "@supabase/auth-ui-shared";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const Index = () => {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [session, setSession] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully signed in.",
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [toast]);
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -14,7 +53,43 @@ const Index = () => {
           <div className="container mx-auto max-w-7xl">
             <div className="flex items-center justify-between mb-6 md:mb-8">
               <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
-              <SidebarTrigger className="md:hidden" />
+              <div className="flex items-center gap-4">
+                {!session ? (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button>Sign In</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Authentication</DialogTitle>
+                        <DialogDescription>
+                          Sign in to your account or create a new one.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <Auth
+                        supabaseClient={supabase}
+                        appearance={{ theme: ThemeSupa }}
+                        theme="light"
+                        providers={[]}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      toast({
+                        title: "Signed out",
+                        description: "You have been signed out successfully.",
+                      });
+                    }}
+                  >
+                    Sign Out
+                  </Button>
+                )}
+                <SidebarTrigger className="md:hidden" />
+              </div>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
