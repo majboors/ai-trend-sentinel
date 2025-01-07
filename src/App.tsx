@@ -6,6 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import AllCoins from "./pages/AllCoins";
 import SingleCoin from "./pages/SingleCoin";
+import ProfitPredictions from "./pages/ProfitPredictions";
+import LossPredictions from "./pages/LossPredictions";
+import PredictionSettings from "./pages/PredictionSettings";
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="p-4">
@@ -26,18 +29,9 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/coins" element={<AllCoins />} />
           <Route path="/coins/:id" element={<SingleCoin />} />
-          <Route
-            path="/predictions/profits"
-            element={<PlaceholderPage title="Profits Predictions" />}
-          />
-          <Route
-            path="/predictions/losses"
-            element={<PlaceholderPage title="Losses Predictions" />}
-          />
-          <Route
-            path="/predictions/settings"
-            element={<PlaceholderPage title="Prediction Settings" />}
-          />
+          <Route path="/predictions/profits" element={<ProfitPredictions />} />
+          <Route path="/predictions/losses" element={<LossPredictions />} />
+          <Route path="/predictions/settings" element={<PredictionSettings />} />
           <Route
             path="/trading/bought"
             element={<PlaceholderPage title="Bought Items" />}
