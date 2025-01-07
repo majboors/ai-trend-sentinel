@@ -197,6 +197,54 @@ export type Database = {
         }
         Relationships: []
       }
+      volatile_trades: {
+        Row: {
+          amount: number
+          closed_at: string | null
+          created_at: string | null
+          entry_price: number
+          exit_price: number | null
+          high_price: number
+          id: string
+          low_price: number
+          profit_loss: number | null
+          status: Database["public"]["Enums"]["trade_status"] | null
+          symbol: string
+          user_id: string
+          volatility: number
+        }
+        Insert: {
+          amount: number
+          closed_at?: string | null
+          created_at?: string | null
+          entry_price: number
+          exit_price?: number | null
+          high_price: number
+          id?: string
+          low_price: number
+          profit_loss?: number | null
+          status?: Database["public"]["Enums"]["trade_status"] | null
+          symbol: string
+          user_id: string
+          volatility: number
+        }
+        Update: {
+          amount?: number
+          closed_at?: string | null
+          created_at?: string | null
+          entry_price?: number
+          exit_price?: number | null
+          high_price?: number
+          id?: string
+          low_price?: number
+          profit_loss?: number | null
+          status?: Database["public"]["Enums"]["trade_status"] | null
+          symbol?: string
+          user_id?: string
+          volatility?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -207,6 +255,7 @@ export type Database = {
     Enums: {
       account_type: "spot" | "margin"
       prediction_status: "active" | "completed" | "cancelled"
+      trade_status: "open" | "closed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never

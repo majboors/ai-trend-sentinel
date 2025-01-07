@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 interface CoinData {
   symbol: string;
@@ -25,6 +26,7 @@ interface CoinData {
 export function CoinVolatileView() {
   const [hoveredCoin, setHoveredCoin] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const { data: coins = [], isLoading, error } = useQuery({
     queryKey: ['volatile-coins'],
@@ -53,10 +55,85 @@ export function CoinVolatileView() {
     meta: {
       onError: (error: Error) => {
         console.error('Query error:', error);
-        toast.error(`Error fetching coins: ${error.message}`);
+        toast({
+          title: "Error",
+          description: `Error fetching coins: ${error.message}`,
+          variant: "destructive",
+        });
       },
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('volatile-trades-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'volatile_trades' },
+        (payload) => {
+          console.log('Volatile trade change:', payload);
+          // Refetch data when changes occur
+          void coins.refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const handleTradeClick = async (coin: CoinData) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "Please sign in to trade",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('volatile_trades')
+        .insert({
+          user_id: session.user.id,
+          symbol: coin.symbol,
+          entry_price: coin.lastPrice,
+          amount: 0, // Set default amount
+          volatility: coin.volatility,
+          high_price: coin.highPrice,
+          low_price: coin.lowPrice,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating volatile trade:', error);
+        toast({
+          title: "Error",
+          description: `Failed to create trade: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: "Trade created successfully",
+      });
+      
+      navigate(`/trading/volatile/${data.id}`);
+    } catch (error) {
+      console.error('Error handling trade:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process trade",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (error) {
     return (
@@ -86,7 +163,7 @@ export function CoinVolatileView() {
       className="p-4 h-[200px] cursor-pointer transition-all hover:shadow-lg"
       onMouseEnter={() => setHoveredCoin(coin.symbol)}
       onMouseLeave={() => setHoveredCoin(null)}
-      onClick={() => navigate(`/coins/${coin.symbol}`)}
+      onClick={() => handleTradeClick(coin)}
     >
       <div className="flex justify-between items-start mb-2">
         <div>
