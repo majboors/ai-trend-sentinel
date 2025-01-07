@@ -12,6 +12,7 @@ import PredictionSettings from "./pages/PredictionSettings";
 import PredictionsOverview from "./pages/PredictionsOverview";
 import TradingBought from "./pages/TradingBought";
 import TradingSold from "./pages/TradingSold";
+import Assets from "./pages/Assets";
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="p-4">
@@ -38,10 +39,7 @@ const App = () => (
           <Route path="/predictions/settings" element={<PredictionSettings />} />
           <Route path="/trading/bought" element={<TradingBought />} />
           <Route path="/trading/sold" element={<TradingSold />} />
-          <Route
-            path="/assets"
-            element={<PlaceholderPage title="Assets" />}
-          />
+          <Route path="/assets" element={<Assets />} />
           <Route
             path="/spent-profits"
             element={<PlaceholderPage title="Spent & Profits" />}
