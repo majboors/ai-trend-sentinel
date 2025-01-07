@@ -1,32 +1,41 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Area, AreaChart, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-interface Asset {
+interface PredictionData {
   symbol: string;
-  free: number;
-  locked: number;
-  account_type: string;
+  profit_loss: number;
+  type: string;
 }
 
-interface AssetsOverviewProps {
-  assets: Asset[];
-  isLoading: boolean;
-}
+export const AssetsOverview = () => {
+  const { data: predictions = [], isLoading } = useQuery({
+    queryKey: ['prediction-trades'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('prediction_trades')
+        .select('*')
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
-export const AssetsOverview = ({ assets, isLoading }: AssetsOverviewProps) => {
   // Prepare data for the charts
-  const spotAssets = assets.filter((asset) => asset.account_type === "spot");
-  const marginAssets = assets.filter((asset) => asset.account_type === "margin");
+  const profitTrades = predictions.filter((trade) => (trade.profit_loss || 0) > 0);
+  const lossTrades = predictions.filter((trade) => (trade.profit_loss || 0) < 0);
 
-  const spotData = spotAssets.map((asset) => ({
-    name: asset.symbol,
-    value: asset.free + asset.locked,
+  const profitData = profitTrades.map((trade) => ({
+    name: trade.symbol,
+    value: trade.profit_loss || 0,
   }));
 
-  const marginData = marginAssets.map((asset) => ({
-    name: asset.symbol,
-    value: asset.free + asset.locked,
+  const lossData = lossTrades.map((trade) => ({
+    name: trade.symbol,
+    value: Math.abs(trade.profit_loss || 0), // Use absolute value for better visualization
   }));
 
   const chartConfig = {
@@ -46,13 +55,13 @@ export const AssetsOverview = ({ assets, isLoading }: AssetsOverviewProps) => {
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle>Spot Assets Distribution</CardTitle>
+          <CardTitle>Profitable Trades Distribution</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
             <ChartContainer config={chartConfig}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={spotData}>
+                <AreaChart data={profitData}>
                   <XAxis dataKey="name" />
                   <YAxis />
                   <ChartTooltip content={<ChartTooltipContent />} />
@@ -71,20 +80,20 @@ export const AssetsOverview = ({ assets, isLoading }: AssetsOverviewProps) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Margin Assets Distribution</CardTitle>
+          <CardTitle>Loss Trades Distribution</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
             <ChartContainer config={chartConfig}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={marginData}>
+                <AreaChart data={lossData}>
                   <XAxis dataKey="name" />
                   <YAxis />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="#3b82f6"
+                    stroke="#ef4444"
                     fill="var(--color-value)"
                   />
                 </AreaChart>
