@@ -32,7 +32,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Starting Binance margin balance fetch...')
+    console.log('Starting Binance isolated margin balance fetch...')
     
     // Check for required environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -75,10 +75,10 @@ serve(async (req) => {
     const queryString = `timestamp=${timestamp}`
     const signature = await cryptoSign(queryString, binanceApiSecret)
 
-    console.log('Making request to Binance API...')
+    console.log('Making request to Binance API for isolated margin account...')
     
     const response = await fetch(
-      `https://api.binance.com/sapi/v1/margin/account?${queryString}&signature=${signature}`,
+      `https://api.binance.com/sapi/v1/margin/isolated/account?${queryString}&signature=${signature}`,
       {
         headers: {
           'X-MBX-APIKEY': binanceApiKey,
@@ -106,14 +106,35 @@ serve(async (req) => {
     }
 
     const data = await response.json()
-    console.log('Successfully received Binance margin response')
+    console.log('Successfully received Binance isolated margin response')
 
-    // Filter and store balances
-    const userAssets = data.userAssets.filter((asset: any) => 
-      parseFloat(asset.free) > 0 || parseFloat(asset.locked) > 0
-    )
+    // Process isolated margin assets
+    const userAssets: any[] = [];
+    if (data.assets) {
+      for (const asset of data.assets) {
+        // Process base asset
+        const baseAsset = {
+          asset: asset.baseAsset.asset,
+          free: parseFloat(asset.baseAsset.free),
+          locked: parseFloat(asset.baseAsset.locked),
+        };
+        if (baseAsset.free > 0 || baseAsset.locked > 0) {
+          userAssets.push(baseAsset);
+        }
 
-    console.log(`Found ${userAssets.length} non-zero margin balances`)
+        // Process quote asset
+        const quoteAsset = {
+          asset: asset.quoteAsset.asset,
+          free: parseFloat(asset.quoteAsset.free),
+          locked: parseFloat(asset.quoteAsset.locked),
+        };
+        if (quoteAsset.free > 0 || quoteAsset.locked > 0) {
+          userAssets.push(quoteAsset);
+        }
+      }
+    }
+
+    console.log(`Found ${userAssets.length} non-zero isolated margin balances`)
 
     // Store in database
     for (const asset of userAssets) {
@@ -122,8 +143,8 @@ serve(async (req) => {
         .upsert({
           user_id: user.id,
           symbol: asset.asset,
-          free: parseFloat(asset.free),
-          locked: parseFloat(asset.locked),
+          free: asset.free,
+          locked: asset.locked,
           account_type: 'margin',
           last_updated: new Date().toISOString(),
         }, {
