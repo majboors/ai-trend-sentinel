@@ -89,6 +89,19 @@ serve(async (req) => {
     if (!response.ok) {
       const errorData = await response.text()
       console.error('Binance API error:', errorData)
+      
+      // Return empty array if margin account is not found or not enabled
+      if (response.status === 404) {
+        console.log('Margin account not found or not enabled, returning empty array')
+        return new Response(
+          JSON.stringify([]),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          },
+        )
+      }
+      
       throw new Error(`Binance API error: ${errorData}`)
     }
 
