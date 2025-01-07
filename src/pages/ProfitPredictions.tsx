@@ -6,7 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ProfitLossCard } from "@/components/dashboard/ProfitLossCard";
-import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
+import { CombinedPerformanceChart } from "@/components/dashboard/CombinedPerformanceChart";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -56,7 +56,6 @@ export default function ProfitPredictions() {
   const { data: coinProfits = [] } = useQuery({
     queryKey: ['coin-profits', viewId],
     queryFn: async () => {
-      console.log('Fetching coin profits...');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session');
 
@@ -71,17 +70,12 @@ export default function ProfitPredictions() {
       const coins = response.data;
       if (!viewData) return [];
 
-      // Calculate potential profit for each coin based on initial investment
       const profits: CoinProfit[] = coins.map((coin: any) => {
         const initialInvestment = Number(viewData.initial_amount);
         const currentPrice = parseFloat(coin.lastPrice);
         const priceChange = parseFloat(coin.priceChangePercent);
         const initialPrice = currentPrice / (1 + priceChange / 100);
-        
-        // Calculate how many coins could have been bought
         const coinsAmount = initialInvestment / initialPrice;
-        
-        // Calculate current value and profit
         const currentValue = coinsAmount * currentPrice;
         const potentialProfit = currentValue - initialInvestment;
         const profitPercentage = (potentialProfit / initialInvestment) * 100;
@@ -95,7 +89,6 @@ export default function ProfitPredictions() {
         };
       });
 
-      // Sort by profit in descending order
       return profits.sort((a, b) => b.potentialProfit - a.potentialProfit);
     },
     enabled: !!viewData,
@@ -156,6 +149,11 @@ export default function ProfitPredictions() {
                 />
               </div>
 
+              <CombinedPerformanceChart 
+                title="Profit Performance" 
+                filter={(trade) => Number(trade.profit_loss) > 0}
+              />
+
               <Card className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Coins Profit Analysis</h2>
                 <div className="overflow-x-auto">
@@ -190,11 +188,6 @@ export default function ProfitPredictions() {
                     </TableBody>
                   </Table>
                 </div>
-              </Card>
-
-              <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Profit Performance</h2>
-                <PerformanceChart />
               </Card>
             </div>
           </div>

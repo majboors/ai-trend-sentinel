@@ -6,7 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ProfitLossCard } from "@/components/dashboard/ProfitLossCard";
-import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
+import { CombinedPerformanceChart } from "@/components/dashboard/CombinedPerformanceChart";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -105,10 +105,10 @@ export default function LossPredictions() {
                 />
               </div>
 
-              <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Loss Performance</h2>
-                <PerformanceChart />
-              </Card>
+              <CombinedPerformanceChart 
+                title="Loss Performance" 
+                filter={(trade) => Number(trade.profit_loss) < 0}
+              />
             </div>
           </div>
         </main>

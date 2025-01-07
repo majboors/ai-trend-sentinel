@@ -6,37 +6,55 @@ import { useToast } from "@/components/ui/use-toast";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ProfitLossCard } from "@/components/dashboard/ProfitLossCard";
-import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
+import { CombinedPerformanceChart } from "@/components/dashboard/CombinedPerformanceChart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  calculateTotalInitialAmount,
+  calculateTotalProfits,
+  calculateTotalLosses,
+  calculateProfitPercentage,
+  calculateLossPercentage,
+} from "@/utils/predictionCalculations";
 
 type PredictionView = Database['public']['Tables']['prediction_views']['Row'];
+type PredictionTrade = Database['public']['Tables']['prediction_trades']['Row'];
 
 export default function PredictionsOverview() {
   const [views, setViews] = useState<PredictionView[]>([]);
+  const [trades, setTrades] = useState<PredictionTrade[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchViews();
+    fetchData();
   }, []);
 
-  const fetchViews = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('prediction_views')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [viewsResponse, tradesResponse] = await Promise.all([
+        supabase
+          .from('prediction_views')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('prediction_trades')
+          .select('*')
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (error) throw error;
-      setViews(data || []);
+      if (viewsResponse.error) throw viewsResponse.error;
+      if (tradesResponse.error) throw tradesResponse.error;
+
+      setViews(viewsResponse.data || []);
+      setTrades(tradesResponse.data || []);
     } catch (error) {
-      console.error('Error fetching views:', error);
+      console.error('Error fetching data:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch prediction views",
+        description: "Failed to fetch prediction data",
         variant: "destructive",
       });
     } finally {
@@ -44,43 +62,11 @@ export default function PredictionsOverview() {
     }
   };
 
-  const getTotalInitialAmount = () => {
-    return views.reduce((sum, view) => sum + Number(view.initial_amount), 0);
-  };
-
-  const getTotalCurrentAmount = () => {
-    return views.reduce((sum, view) => sum + Number(view.current_amount), 0);
-  };
-
-  const getProfitLossPercentage = () => {
-    const initial = getTotalInitialAmount();
-    const current = getTotalCurrentAmount();
-    return initial > 0 ? ((current - initial) / initial) * 100 : 0;
-  };
-
-  const getTotalProfits = () => {
-    return views.reduce((sum, view) => {
-      const profit = Number(view.current_amount) - Number(view.initial_amount);
-      return sum + (profit > 0 ? profit : 0);
-    }, 0);
-  };
-
-  const getTotalLosses = () => {
-    return views.reduce((sum, view) => {
-      const loss = Number(view.current_amount) - Number(view.initial_amount);
-      return sum + (loss < 0 ? loss : 0);
-    }, 0);
-  };
-
-  const getProfitPercentage = () => {
-    const initial = getTotalInitialAmount();
-    return initial > 0 ? (getTotalProfits() / initial) * 100 : 0;
-  };
-
-  const getLossPercentage = () => {
-    const initial = getTotalInitialAmount();
-    return initial > 0 ? (getTotalLosses() / initial) * 100 : 0;
-  };
+  const totalInitialAmount = calculateTotalInitialAmount(views);
+  const totalProfits = calculateTotalProfits(trades);
+  const totalLosses = calculateTotalLosses(trades);
+  const profitPercentage = calculateProfitPercentage(trades, totalInitialAmount);
+  const lossPercentage = calculateLossPercentage(trades, totalInitialAmount);
 
   return (
     <SidebarProvider>
@@ -102,25 +88,22 @@ export default function PredictionsOverview() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <ProfitLossCard
                   title="Total Initial Investment"
-                  value={getTotalInitialAmount()}
+                  value={totalInitialAmount}
                   percentage={0}
                 />
                 <ProfitLossCard
                   title="Total Profits"
-                  value={getTotalProfits()}
-                  percentage={getProfitPercentage()}
+                  value={totalProfits}
+                  percentage={profitPercentage}
                 />
                 <ProfitLossCard
                   title="Total Losses"
-                  value={getTotalLosses()}
-                  percentage={getLossPercentage()}
+                  value={totalLosses}
+                  percentage={lossPercentage}
                 />
               </div>
 
-              <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Performance Overview</h2>
-                <PerformanceChart />
-              </Card>
+              <CombinedPerformanceChart title="Overall Performance" />
 
               <Card className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Active Predictions</h2>
