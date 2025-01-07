@@ -44,7 +44,17 @@ const Assets = () => {
           .select("*")
           .order("symbol");
 
-        if (error) throw error;
+        if (error) {
+          console.error("Supabase query error:", error);
+          throw error;
+        }
+
+        if (!data) {
+          console.log("No assets found");
+          return [];
+        }
+
+        console.log("Successfully fetched assets:", data);
         return data;
       } catch (error) {
         console.error("Error fetching assets:", error);
