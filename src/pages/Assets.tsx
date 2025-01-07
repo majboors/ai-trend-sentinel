@@ -25,8 +25,6 @@ const Assets = () => {
           variant: "destructive",
         });
         navigate("/");
-      } else if (session.user) {
-        console.log("Authenticated user ID:", session.user.id);
       }
     };
     checkAuth();
@@ -44,7 +42,7 @@ const Assets = () => {
         
         // Then fetch from our database
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
+        if (!session?.user) {
           throw new Error('No authenticated session found');
         }
         
@@ -53,6 +51,7 @@ const Assets = () => {
         const { data, error } = await supabase
           .from("assets")
           .select("*")
+          .eq('user_id', session.user.id)
           .order("symbol");
 
         if (error) {
@@ -60,13 +59,8 @@ const Assets = () => {
           throw error;
         }
 
-        if (!data) {
-          console.log("No assets found in database");
-          return [];
-        }
-
         console.log("Successfully fetched assets from database:", data);
-        return data;
+        return data || [];
       } catch (error) {
         console.error("Error fetching assets:", error);
         toast({
