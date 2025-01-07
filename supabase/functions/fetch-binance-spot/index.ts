@@ -23,16 +23,43 @@ serve(async (req) => {
 
     // Get the user's API keys
     const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) throw new Error("No user found");
+    if (!user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
 
+    console.log("Fetching API keys for user:", user.id);
     const { data: apiKeys, error: apiKeysError } = await supabaseClient
       .from("api_keys")
       .select("binance_api_key, binance_api_secret")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (apiKeysError || !apiKeys) {
-      throw new Error("No API keys found");
+    if (apiKeysError) {
+      console.error("Error fetching API keys:", apiKeysError);
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch API keys" }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+
+    if (!apiKeys) {
+      console.log("No API keys found for user:", user.id);
+      return new Response(
+        JSON.stringify({ error: "No API keys found. Please add your Binance API keys in the settings." }),
+        { 
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
 
     // Fetch spot account information from Binance
@@ -40,6 +67,7 @@ serve(async (req) => {
     const queryString = `timestamp=${timestamp}`;
     const signature = await createHmac(apiKeys.binance_api_secret, queryString);
 
+    console.log("Fetching Binance spot account data...");
     const response = await fetch(
       `https://api.binance.com/api/v3/account?${queryString}&signature=${signature}`,
       {
@@ -50,11 +78,15 @@ serve(async (req) => {
     );
 
     if (!response.ok) {
-      if (response.status === 404) {
-        return new Response(JSON.stringify([]), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        });
+      console.error("Binance API error:", response.status, await response.text());
+      if (response.status === 401) {
+        return new Response(
+          JSON.stringify({ error: "Invalid API keys. Please check your Binance API keys." }),
+          { 
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
       }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -65,16 +97,20 @@ serve(async (req) => {
         parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0
     );
 
+    console.log("Successfully fetched spot balances");
     return new Response(JSON.stringify(balances), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    console.error("Error in fetch-binance-spot:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      }
+    );
   }
 });
 

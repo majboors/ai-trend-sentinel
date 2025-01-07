@@ -30,7 +30,7 @@ export const ApiKeysManager = () => {
         .from("api_keys")
         .select("binance_api_key, binance_api_secret")
         .eq('user_id', session.user.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       if (data) {
@@ -38,6 +38,11 @@ export const ApiKeysManager = () => {
       }
     } catch (error) {
       console.error("Error fetching API keys:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch API keys. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -74,6 +79,9 @@ export const ApiKeysManager = () => {
         title: "Success",
         description: "API keys updated successfully",
       });
+      
+      // Refresh the assets data after updating keys
+      window.location.reload();
     } catch (error) {
       console.error("Error updating API keys:", error);
       toast({
