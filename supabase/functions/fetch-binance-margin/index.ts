@@ -1,10 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 console.log("Hello from fetch-binance-margin!");
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -23,15 +28,19 @@ serve(async (req) => {
 
     // Get the user's API keys
     const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) throw new Error("No user found");
+    if (!user) {
+      throw new Error("No user found");
+    }
 
+    console.log('Fetching API keys for user:', user.id);
     const { data: apiKeys, error: apiKeysError } = await supabaseClient
       .from("api_keys")
       .select("binance_api_key, binance_api_secret")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (apiKeysError || !apiKeys) {
+      console.error('API keys error:', apiKeysError);
       throw new Error("No API keys found");
     }
 
@@ -40,6 +49,7 @@ serve(async (req) => {
     const queryString = `timestamp=${timestamp}`;
     const signature = await createHmac(apiKeys.binance_api_secret, queryString);
 
+    console.log('Fetching margin account info from Binance...');
     const response = await fetch(
       `https://api.binance.com/sapi/v1/margin/isolated/account?${queryString}&signature=${signature}`,
       {
@@ -50,46 +60,14 @@ serve(async (req) => {
     );
 
     if (!response.ok) {
+      console.error('Binance API error:', response.status, await response.text());
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('Successfully fetched margin account data');
     
-    // Transform the data to include calculated leverage values
-    const leverageData = data.assets.map((asset: any) => {
-      const baseAsset = asset.baseAsset;
-      const quoteAsset = asset.quoteAsset;
-      
-      // Calculate total assets and debts
-      const totalBaseAsset = parseFloat(baseAsset.borrowed) + parseFloat(baseAsset.free);
-      const totalQuoteAsset = parseFloat(quoteAsset.borrowed) + parseFloat(quoteAsset.free);
-      
-      // Calculate debt and equity
-      const debt = parseFloat(baseAsset.borrowed) + parseFloat(quoteAsset.borrowed);
-      const equity = (parseFloat(baseAsset.free) + parseFloat(quoteAsset.free)) - debt;
-      
-      // Calculate leverage ratio (ensure it's a number)
-      const leverageRatio = equity > 0 ? (debt + equity) / equity : 0;
-
-      return {
-        symbol: asset.symbol,
-        leverage: leverageRatio,
-        debt: debt,
-        equity: equity,
-        baseAsset: {
-          asset: baseAsset.asset,
-          borrowed: baseAsset.borrowed,
-          free: baseAsset.free,
-        },
-        quoteAsset: {
-          asset: quoteAsset.asset,
-          borrowed: quoteAsset.borrowed,
-          free: quoteAsset.free,
-        },
-      };
-    });
-
-    return new Response(JSON.stringify(leverageData), {
+    return new Response(JSON.stringify(data.assets), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

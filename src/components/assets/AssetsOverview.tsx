@@ -30,20 +30,12 @@ export const AssetsOverview = ({ assets, isLoading }: AssetsOverviewProps) => {
   }));
 
   const chartConfig = {
-    spot: {
-      color: "#22c55e",
+    value: {
       theme: {
         light: "#dcfce7",
         dark: "#166534",
-      },
-    },
-    margin: {
-      color: "#3b82f6",
-      theme: {
-        light: "#dbeafe",
-        dark: "#1e40af",
-      },
-    },
+      }
+    }
   };
 
   if (isLoading) {
@@ -67,8 +59,8 @@ export const AssetsOverview = ({ assets, isLoading }: AssetsOverviewProps) => {
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke={chartConfig.spot.color}
-                    fill={chartConfig.spot.theme.light}
+                    stroke="#22c55e"
+                    fill="var(--color-value)"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -92,8 +84,8 @@ export const AssetsOverview = ({ assets, isLoading }: AssetsOverviewProps) => {
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke={chartConfig.margin.color}
-                    fill={chartConfig.margin.theme.light}
+                    stroke="#3b82f6"
+                    fill="var(--color-value)"
                   />
                 </AreaChart>
               </ResponsiveContainer>
