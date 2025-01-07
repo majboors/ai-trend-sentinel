@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import AllCoins from "./pages/AllCoins";
+import SingleCoin from "./pages/SingleCoin";
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="p-4">
@@ -24,6 +25,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/coins" element={<AllCoins />} />
+          <Route path="/coins/:id" element={<SingleCoin />} />
           <Route
             path="/predictions/profits"
             element={<PlaceholderPage title="Profits Predictions" />}

@@ -7,6 +7,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 import {
   BarChart3,
@@ -25,7 +28,15 @@ import { Link } from "react-router-dom";
 
 const menuItems = [
   { title: "Dashboard", icon: Home, url: "/" },
-  { title: "All Coins", icon: FolderTree, url: "/coins" },
+  {
+    title: "All Coins",
+    icon: FolderTree,
+    url: "/coins",
+    items: [
+      { title: "Profit", icon: BarChart3, url: "/coins?filter=profit" },
+      { title: "Loss", icon: DollarSign, url: "/coins?filter=loss" },
+    ],
+  },
   {
     title: "Predictions",
     icon: LineChart,
@@ -64,12 +75,33 @@ export function DashboardSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <Link to={item.url || '/'} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
+                  {item.items ? (
+                    <>
+                      <SidebarMenuButton>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                      <SidebarMenuSub>
+                        {item.items.map((subItem) => (
+                          <SidebarMenuSubItem key={subItem.title}>
+                            <SidebarMenuSubButton asChild>
+                              <Link to={subItem.url} className="flex items-center gap-2">
+                                <subItem.icon className="h-4 w-4" />
+                                <span>{subItem.title}</span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </>
+                  ) : (
+                    <SidebarMenuButton asChild>
+                      <Link to={item.url} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
