@@ -51,6 +51,7 @@ const menuItems = [
   {
     title: "Trading",
     icon: ArrowLeftRight,
+    url: "/trading/bought",
     items: [
       { title: "Bought", icon: ShoppingCart, url: "/trading/bought" },
       { title: "Sold", icon: ShoppingBag, url: "/trading/sold" },
@@ -59,6 +60,7 @@ const menuItems = [
   {
     title: "Assets",
     icon: Wallet,
+    url: "/assets",
     items: [
       { title: "Overview", icon: BarChart3, url: "/assets" },
       { title: "Spent/Profits", icon: DollarSign, url: "/spent-profits" },
