@@ -2,7 +2,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { CoinVolatileView } from "@/components/coins/CoinVolatileView";
 
-export function TradingVolatile() {
+export default function TradingVolatile() {
   return (
     <SidebarProvider>
       <div className="flex h-screen">
