@@ -5,6 +5,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 interface CoinData {
   symbol: string;
@@ -26,7 +27,7 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
   const [hoveredCoin, setHoveredCoin] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const { data: coins = [], isLoading } = useQuery({
+  const { data: coins = [], isLoading, error } = useQuery({
     queryKey: ['coins'],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -39,12 +40,18 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch coins');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch coins');
       }
 
-      return response.json();
+      const data = await response.json();
+      console.log(`Fetched ${data.length} trading pairs`);
+      return data;
     },
     refetchInterval: 30000,
+    onError: (error) => {
+      toast.error(`Error fetching coins: ${error.message}`);
+    },
   });
 
   const filteredCoins = coins.filter((coin: CoinData) => {
@@ -54,6 +61,14 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
 
   const profitCoins = filteredCoins.filter((coin: CoinData) => coin.profit);
   const lossCoins = filteredCoins.filter((coin: CoinData) => !coin.profit);
+
+  if (error) {
+    return (
+      <div className="text-center py-8 text-red-500">
+        <p>Error loading coins. Please try again later.</p>
+      </div>
+    );
+  }
 
   const CoinCard = ({ coin }: { coin: CoinData }) => (
     <Card

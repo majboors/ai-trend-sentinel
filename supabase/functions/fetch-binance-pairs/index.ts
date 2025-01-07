@@ -17,7 +17,7 @@ interface SymbolInfo {
 }
 
 async function fetchSpotCoins(): Promise<SymbolInfo[]> {
-  console.log('Fetching spot coins...');
+  console.log('Fetching spot trading pairs...');
   const [exchangeInfo, tickers] = await Promise.all([
     fetch('https://api.binance.com/api/v3/exchangeInfo').then(res => res.json()),
     fetch('https://api.binance.com/api/v3/ticker/24hr').then(res => res.json())
@@ -25,6 +25,31 @@ async function fetchSpotCoins(): Promise<SymbolInfo[]> {
 
   const tickersMap = new Map(tickers.map((t: any) => [t.symbol, t]));
   
+  return exchangeInfo.symbols
+    .filter((s: any) => s.status === 'TRADING' && s.isSpotTradingAllowed)
+    .map((s: any) => {
+      const ticker = tickersMap.get(s.symbol) || {};
+      return {
+        symbol: s.symbol,
+        baseAsset: s.baseAsset,
+        quoteAsset: s.quoteAsset,
+        priceChangePercent: ticker.priceChangePercent || '0',
+        lastPrice: ticker.lastPrice || '0',
+        volume: ticker.volume || '0',
+        quoteVolume: ticker.quoteVolume || '0'
+      };
+    });
+}
+
+async function fetchFuturesCoins(): Promise<SymbolInfo[]> {
+  console.log('Fetching futures trading pairs...');
+  const [exchangeInfo, tickers] = await Promise.all([
+    fetch('https://fapi.binance.com/fapi/v1/exchangeInfo').then(res => res.json()),
+    fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').then(res => res.json())
+  ]);
+
+  const tickersMap = new Map(tickers.map((t: any) => [t.symbol, t]));
+
   return exchangeInfo.symbols
     .filter((s: any) => s.status === 'TRADING')
     .map((s: any) => {
@@ -72,21 +97,36 @@ serve(async (req) => {
       )
     }
 
-    console.log('Fetching all coins for user:', user.id);
-    const spotCoins = await fetchSpotCoins();
+    console.log('Fetching all trading pairs for user:', user.id);
     
-    // Process and format the data
-    const processedData = spotCoins.map((item) => ({
-      symbol: item.symbol,
-      baseAsset: item.baseAsset,
-      quoteAsset: item.quoteAsset,
-      priceChange: 0,
-      priceChangePercent: parseFloat(item.priceChangePercent),
-      lastPrice: parseFloat(item.lastPrice),
-      volume: parseFloat(item.volume),
-      quoteVolume: parseFloat(item.quoteVolume),
-      profit: parseFloat(item.priceChangePercent) > 0,
-    }));
+    // Fetch both spot and futures data
+    const [spotCoins, futuresCoins] = await Promise.all([
+      fetchSpotCoins(),
+      fetchFuturesCoins()
+    ]);
+    
+    // Combine and deduplicate the data
+    const allCoins = [...spotCoins, ...futuresCoins];
+    const uniqueSymbols = new Set();
+    const processedData = allCoins
+      .filter(item => {
+        if (uniqueSymbols.has(item.symbol)) return false;
+        uniqueSymbols.add(item.symbol);
+        return true;
+      })
+      .map(item => ({
+        symbol: item.symbol,
+        baseAsset: item.baseAsset,
+        quoteAsset: item.quoteAsset,
+        priceChange: 0,
+        priceChangePercent: parseFloat(item.priceChangePercent),
+        lastPrice: parseFloat(item.lastPrice),
+        volume: parseFloat(item.volume),
+        quoteVolume: parseFloat(item.quoteVolume),
+        profit: parseFloat(item.priceChangePercent) > 0,
+      }));
+
+    console.log(`Total unique trading pairs found: ${processedData.length}`);
 
     return new Response(
       JSON.stringify(processedData),
