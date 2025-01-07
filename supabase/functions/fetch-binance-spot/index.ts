@@ -28,10 +28,12 @@ const cryptoSign = async (message: string, secret: string): Promise<string> => {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    console.log('Starting Binance spot balance fetch...')
+    
     // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -59,14 +61,14 @@ serve(async (req) => {
     const apiSecret = Deno.env.get('BINANCE_API_SECRET')
 
     if (!apiKey || !apiSecret) {
-      throw new Error('Missing API credentials')
+      throw new Error('Missing Binance API credentials')
     }
 
     const timestamp = Date.now()
     const queryString = `timestamp=${timestamp}`
     const signature = await cryptoSign(queryString, apiSecret)
 
-    console.log('Making request to Binance API from Singapore region...')
+    console.log('Making request to Binance API...')
     
     const response = await fetch(
       `https://api.binance.com/api/v3/account?${queryString}&signature=${signature}`,
@@ -79,18 +81,22 @@ serve(async (req) => {
     )
 
     if (!response.ok) {
-      const errorData = await response.text()
-      console.error('Binance API error:', errorData)
-      throw new Error(`Binance API error: ${errorData}`)
+      const errorText = await response.text()
+      console.error('Binance API error:', errorText)
+      throw new Error(`Binance API error: ${errorText}`)
     }
 
     const data = await response.json()
+    console.log('Successfully received Binance response')
 
-    // Store balances in the database
+    // Filter and store balances
     const balances = data.balances.filter((balance: any) => 
       parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0
     )
 
+    console.log(`Found ${balances.length} non-zero balances`)
+
+    // Store in database
     for (const balance of balances) {
       const { error: upsertError } = await supabaseClient
         .from('assets')
@@ -119,7 +125,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Function error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error instanceof Error ? error.stack : undefined
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,

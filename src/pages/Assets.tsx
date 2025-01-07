@@ -5,11 +5,10 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { fetchBinanceBalances } from "@/lib/binance";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AssetsTable } from "@/components/assets/AssetsTable";
 
 const Assets = () => {
   const { toast } = useToast();
@@ -35,8 +34,11 @@ const Assets = () => {
     queryKey: ["assets"],
     queryFn: async () => {
       try {
+        console.log('Starting asset fetch...');
+        
         // First, fetch from Binance API and update database
         await fetchBinanceBalances();
+        console.log('Binance balances fetched and stored');
         
         // Then fetch from our database
         const { data, error } = await supabase
@@ -71,29 +73,6 @@ const Assets = () => {
 
   const spotAssets = assets?.filter((asset) => asset.account_type === "spot") || [];
   const marginAssets = assets?.filter((asset) => asset.account_type === "margin") || [];
-
-  if (isLoading) {
-    return (
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full">
-          <DashboardSidebar />
-          <main className="flex-1 p-4 md:p-8">
-            <div className="container mx-auto max-w-7xl">
-              <div className="flex items-center justify-between mb-6 md:mb-8">
-                <Skeleton className="h-8 w-32" />
-                <SidebarTrigger className="md:hidden" />
-              </div>
-              <div className="space-y-4">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            </div>
-          </main>
-        </div>
-      </SidebarProvider>
-    );
-  }
 
   if (error) {
     return (
@@ -161,47 +140,6 @@ const Assets = () => {
         </main>
       </div>
     </SidebarProvider>
-  );
-};
-
-const AssetsTable = ({ assets, isLoading }: { assets: any[]; isLoading: boolean }) => {
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {[...Array(5)].map((_, i) => (
-          <Skeleton key={i} className="h-12 w-full" />
-        ))}
-      </div>
-    );
-  }
-
-  if (!assets.length) {
-    return <p className="text-muted-foreground">No assets found.</p>;
-  }
-
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Asset</TableHead>
-          <TableHead className="text-right">Available</TableHead>
-          <TableHead className="text-right">Locked</TableHead>
-          <TableHead className="text-right">Total</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {assets.map((asset) => (
-          <TableRow key={`${asset.symbol}-${asset.account_type}`}>
-            <TableCell className="font-medium">{asset.symbol}</TableCell>
-            <TableCell className="text-right">{parseFloat(asset.free).toFixed(8)}</TableCell>
-            <TableCell className="text-right">{parseFloat(asset.locked).toFixed(8)}</TableCell>
-            <TableCell className="text-right">
-              {(parseFloat(asset.free) + parseFloat(asset.locked)).toFixed(8)}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
   );
 };
 
