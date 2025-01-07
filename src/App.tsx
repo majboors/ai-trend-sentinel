@@ -9,6 +9,7 @@ import SingleCoin from "./pages/SingleCoin";
 import ProfitPredictions from "./pages/ProfitPredictions";
 import LossPredictions from "./pages/LossPredictions";
 import PredictionSettings from "./pages/PredictionSettings";
+import PredictionsOverview from "./pages/PredictionsOverview";
 import TradingBought from "./pages/TradingBought";
 import TradingSold from "./pages/TradingSold";
 
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/coins" element={<AllCoins />} />
           <Route path="/coins/:id" element={<SingleCoin />} />
+          <Route path="/predictions" element={<PredictionsOverview />} />
           <Route path="/predictions/profits" element={<ProfitPredictions />} />
           <Route path="/predictions/losses" element={<LossPredictions />} />
           <Route path="/predictions/settings" element={<PredictionSettings />} />
