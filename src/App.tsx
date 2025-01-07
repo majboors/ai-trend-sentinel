@@ -14,13 +14,7 @@ import TradingBought from "./pages/TradingBought";
 import TradingSold from "./pages/TradingSold";
 import Assets from "./pages/Assets";
 import Leverage from "./pages/Leverage";
-
-const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="p-4">
-    <h1 className="text-2xl font-bold mb-4">{title}</h1>
-    <p>This page is under construction.</p>
-  </div>
-);
+import SpentProfits from "./pages/SpentProfits";
 
 const queryClient = new QueryClient();
 
@@ -41,10 +35,7 @@ const App = () => (
           <Route path="/trading/bought" element={<TradingBought />} />
           <Route path="/trading/sold" element={<TradingSold />} />
           <Route path="/assets" element={<Assets />} />
-          <Route
-            path="/spent-profits"
-            element={<PlaceholderPage title="Spent & Profits" />}
-          />
+          <Route path="/spent-profits" element={<SpentProfits />} />
           <Route path="/leverage" element={<Leverage />} />
         </Routes>
       </BrowserRouter>
