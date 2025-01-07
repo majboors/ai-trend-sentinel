@@ -25,6 +25,7 @@ import {
   TrendingDown,
   TrendingUp,
   Wallet,
+  ChevronDown,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -107,7 +108,7 @@ export function DashboardSidebar() {
                       <CollapsibleContent>
                         <SidebarMenuSub>
                           {item.items.map((subItem) =>
-                            subItem.items ? (
+                            'items' in subItem ? (
                               <SidebarMenuItem key={subItem.title}>
                                 <Collapsible open={openSections[subItem.title]} onOpenChange={() => toggleSection(subItem.title)}>
                                   <CollapsibleTrigger asChild>
@@ -138,7 +139,7 @@ export function DashboardSidebar() {
                                   </CollapsibleContent>
                                 </Collapsible>
                               </SidebarMenuItem>
-            ) : (
+                            ) : (
                               <SidebarMenuItem key={subItem.title}>
                                 <SidebarMenuSubButton asChild>
                                   <Link
@@ -157,7 +158,7 @@ export function DashboardSidebar() {
                     </Collapsible>
                   ) : (
                     <SidebarMenuButton asChild>
-                      <Link to={item.url} className="flex items-center gap-2">
+                      <Link to={item.url || '/'} className="flex items-center gap-2">
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </Link>
