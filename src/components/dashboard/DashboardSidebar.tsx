@@ -31,7 +31,25 @@ import { Link } from "react-router-dom";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
 
-const menuItems = [
+type MenuItem = {
+  title: string;
+  icon: any;
+  url?: string;
+  items?: SubMenuItem[];
+};
+
+type SubMenuItem = {
+  title: string;
+  icon: any;
+  url?: string;
+  items?: {
+    title: string;
+    icon: any;
+    url: string;
+  }[];
+};
+
+const menuItems: MenuItem[] = [
   {
     title: "Pages",
     icon: FileText,
@@ -108,7 +126,7 @@ export function DashboardSidebar() {
                       <CollapsibleContent>
                         <SidebarMenuSub>
                           {item.items.map((subItem) =>
-                            'items' in subItem ? (
+                            subItem.items ? (
                               <SidebarMenuItem key={subItem.title}>
                                 <Collapsible open={openSections[subItem.title]} onOpenChange={() => toggleSection(subItem.title)}>
                                   <CollapsibleTrigger asChild>
@@ -143,7 +161,7 @@ export function DashboardSidebar() {
                               <SidebarMenuItem key={subItem.title}>
                                 <SidebarMenuSubButton asChild>
                                   <Link
-                                    to={subItem.url}
+                                    to={subItem.url || '/'}
                                     className="flex items-center gap-2"
                                   >
                                     <subItem.icon className="h-4 w-4" />
