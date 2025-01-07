@@ -6,6 +6,41 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+interface SymbolInfo {
+  symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
+  priceChangePercent: string;
+  lastPrice: string;
+  volume: string;
+  quoteVolume: string;
+}
+
+async function fetchSpotCoins(): Promise<SymbolInfo[]> {
+  console.log('Fetching spot coins...');
+  const [exchangeInfo, tickers] = await Promise.all([
+    fetch('https://api.binance.com/api/v3/exchangeInfo').then(res => res.json()),
+    fetch('https://api.binance.com/api/v3/ticker/24hr').then(res => res.json())
+  ]);
+
+  const tickersMap = new Map(tickers.map((t: any) => [t.symbol, t]));
+  
+  return exchangeInfo.symbols
+    .filter((s: any) => s.status === 'TRADING')
+    .map((s: any) => {
+      const ticker = tickersMap.get(s.symbol) || {};
+      return {
+        symbol: s.symbol,
+        baseAsset: s.baseAsset,
+        quoteAsset: s.quoteAsset,
+        priceChangePercent: ticker.priceChangePercent || '0',
+        lastPrice: ticker.lastPrice || '0',
+        volume: ticker.volume || '0',
+        quoteVolume: ticker.quoteVolume || '0'
+      };
+    });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -37,46 +72,21 @@ serve(async (req) => {
       )
     }
 
-    // Get user's API keys
-    const { data: apiKeys, error: apiKeysError } = await supabaseClient
-      .from('api_keys')
-      .select('binance_api_key, binance_api_secret')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (apiKeysError || !apiKeys) {
-      return new Response(
-        JSON.stringify({ error: 'API keys not found' }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      )
-    }
-
-    // Fetch 24hr ticker price change statistics
-    const response = await fetch('https://api.binance.com/api/v3/ticker/24hr', {
-      headers: {
-        'X-MBX-APIKEY': apiKeys.binance_api_key,
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
+    console.log('Fetching all coins for user:', user.id);
+    const spotCoins = await fetchSpotCoins();
     
-    // Process and filter the data
-    const processedData = data.map((item: any) => ({
+    // Process and format the data
+    const processedData = spotCoins.map((item) => ({
       symbol: item.symbol,
-      priceChange: parseFloat(item.priceChange),
+      baseAsset: item.baseAsset,
+      quoteAsset: item.quoteAsset,
+      priceChange: 0,
       priceChangePercent: parseFloat(item.priceChangePercent),
       lastPrice: parseFloat(item.lastPrice),
       volume: parseFloat(item.volume),
       quoteVolume: parseFloat(item.quoteVolume),
       profit: parseFloat(item.priceChangePercent) > 0,
-    }))
+    }));
 
     return new Response(
       JSON.stringify(processedData),
@@ -86,6 +96,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
+    console.error('Error in fetch-binance-pairs:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

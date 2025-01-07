@@ -4,9 +4,12 @@ import { Card } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CoinData {
   symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
   priceChange: number;
   priceChangePercent: number;
   lastPrice: number;
@@ -61,7 +64,7 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
     >
       <div className="flex justify-between items-start mb-2">
         <div>
-          <h3 className="font-semibold">{coin.symbol}</h3>
+          <h3 className="font-semibold">{coin.baseAsset}/{coin.quoteAsset}</h3>
           <p className="text-sm text-muted-foreground">
             ${coin.lastPrice.toFixed(8)}
           </p>
@@ -85,7 +88,7 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
         <div className="h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={[
-              { time: "24h", value: coin.lastPrice - coin.priceChange },
+              { time: "24h", value: coin.lastPrice - (coin.lastPrice * coin.priceChangePercent / 100) },
               { time: "now", value: coin.lastPrice },
             ]}>
               <XAxis dataKey="time" hide />
@@ -106,8 +109,12 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
 
   if (isLoading) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">Loading coins...</p>
+      <div className="grid grid-cols-2 gap-4">
+        {[...Array(6)].map((_, i) => (
+          <Card key={i} className="p-4 h-[200px]">
+            <Skeleton className="h-full" />
+          </Card>
+        ))}
       </div>
     );
   }
@@ -123,13 +130,13 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-green-500">Profit</h2>
+        <h2 className="text-lg font-semibold text-green-500">Profit ({profitCoins.length})</h2>
         {profitCoins.map((coin: CoinData) => (
           <CoinCard key={coin.symbol} coin={coin} />
         ))}
       </div>
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-red-500">Loss</h2>
+        <h2 className="text-lg font-semibold text-red-500">Loss ({lossCoins.length})</h2>
         {lossCoins.map((coin: CoinData) => (
           <CoinCard key={coin.symbol} coin={coin} />
         ))}
