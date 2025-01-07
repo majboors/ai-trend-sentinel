@@ -4,8 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import AllCoins from "./pages/AllCoins";
 
-// Placeholder components for new routes
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="p-4">
     <h1 className="text-2xl font-bold mb-4">{title}</h1>
@@ -23,14 +23,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route
-            path="/coins/profit"
-            element={<PlaceholderPage title="Profit View" />}
-          />
-          <Route
-            path="/coins/loss"
-            element={<PlaceholderPage title="Loss View" />}
-          />
+          <Route path="/coins" element={<AllCoins />} />
           <Route
             path="/predictions/profits"
             element={<PlaceholderPage title="Profits Predictions" />}

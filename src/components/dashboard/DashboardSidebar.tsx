@@ -2,13 +2,11 @@ import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
-  SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarGroupContent,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 import {
   BarChart3,
@@ -21,49 +19,19 @@ import {
   ShoppingBag,
   ShoppingCart,
   ArrowLeftRight,
-  TrendingDown,
-  TrendingUp,
   Wallet,
-  ChevronDown,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState } from "react";
 
-type MenuItem = {
-  title: string;
-  icon: any;
-  url?: string;
-  items?: SubMenuItem[];
-};
-
-type SubMenuItem = {
-  title: string;
-  icon: any;
-  url?: string;
-  items?: {
-    title: string;
-    icon: any;
-    url: string;
-  }[];
-};
-
-const menuItems: MenuItem[] = [
+const menuItems = [
   { title: "Dashboard", icon: Home, url: "/" },
-  {
-    title: "All Coins",
-    icon: FolderTree,
-    items: [
-      { title: "Profit View", icon: TrendingUp, url: "/coins/profit" },
-      { title: "Loss View", icon: TrendingDown, url: "/coins/loss" },
-    ],
-  },
+  { title: "All Coins", icon: FolderTree, url: "/coins" },
   {
     title: "Predictions",
     icon: LineChart,
     items: [
-      { title: "Profits", icon: TrendingUp, url: "/predictions/profits" },
-      { title: "Losses", icon: TrendingDown, url: "/predictions/losses" },
+      { title: "Profits", icon: BarChart3, url: "/predictions/profits" },
+      { title: "Losses", icon: DollarSign, url: "/predictions/losses" },
       { title: "Settings", icon: Settings, url: "/predictions/settings" },
     ],
   },
@@ -87,15 +55,6 @@ const menuItems: MenuItem[] = [
 ];
 
 export function DashboardSidebar() {
-  const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>({});
-
-  const toggleSection = (title: string) => {
-    setOpenSections(prev => ({
-      ...prev,
-      [title]: !prev[title]
-    }));
-  };
-
   return (
     <Sidebar>
       <SidebarContent>
@@ -105,43 +64,12 @@ export function DashboardSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  {item.items ? (
-                    <Collapsible open={openSections[item.title]} onOpenChange={() => toggleSection(item.title)}>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton className="w-full flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <item.icon className="h-4 w-4" />
-                            <span>{item.title}</span>
-                          </div>
-                          <ChevronDown className={`h-4 w-4 transition-transform ${openSections[item.title] ? 'transform rotate-180' : ''}`} />
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {item.items.map((subItem) => (
-                            <SidebarMenuItem key={subItem.title}>
-                              <SidebarMenuSubButton asChild>
-                                <Link
-                                  to={subItem.url || '/'}
-                                  className="flex items-center gap-2"
-                                >
-                                  <subItem.icon className="h-4 w-4" />
-                                  <span>{subItem.title}</span>
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuItem>
-                          ))}
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ) : (
-                    <SidebarMenuButton asChild>
-                      <Link to={item.url || '/'} className="flex items-center gap-2">
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  )}
+                  <SidebarMenuButton asChild>
+                    <Link to={item.url || '/'} className="flex items-center gap-2">
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
