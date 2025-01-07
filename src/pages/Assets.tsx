@@ -9,6 +9,7 @@ import { fetchBinanceBalances } from "@/lib/binance";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AssetsTable } from "@/components/assets/AssetsTable";
+import { AssetsOverview } from "@/components/assets/AssetsOverview";
 import { ApiKeysManager } from "@/components/assets/ApiKeysManager";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -95,8 +96,8 @@ const Assets = () => {
         throw error;
       }
     },
-    enabled: hasApiKeys === true, // Only run query if API keys exist
-    refetchInterval: 30000, // Refresh every 30 seconds
+    enabled: hasApiKeys === true,
+    refetchInterval: 30000,
   });
 
   const spotAssets = assets?.filter((asset) => asset.account_type === "spot") || [];
@@ -133,7 +134,7 @@ const Assets = () => {
       <div className="min-h-screen flex w-full">
         <DashboardSidebar />
         <main className="flex-1 p-4 md:p-8">
-          <div className="container mx-auto max-w-7xl">
+          <div className="container mx-auto max-w-7xl space-y-6">
             <div className="flex items-center justify-between mb-6 md:mb-8">
               <h1 className="text-2xl md:text-3xl font-bold">Assets</h1>
               <SidebarTrigger className="md:hidden" />
@@ -151,34 +152,38 @@ const Assets = () => {
                 </AlertDescription>
               </Alert>
             ) : (
-              <Tabs defaultValue="spot" className="space-y-4">
-                <TabsList>
-                  <TabsTrigger value="spot">Spot Account</TabsTrigger>
-                  <TabsTrigger value="margin">Margin Account</TabsTrigger>
-                </TabsList>
+              <>
+                <AssetsOverview assets={assets || []} isLoading={isLoading} />
+                
+                <Tabs defaultValue="spot" className="space-y-4">
+                  <TabsList>
+                    <TabsTrigger value="spot">Spot Account</TabsTrigger>
+                    <TabsTrigger value="margin">Margin Account</TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="spot">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Spot Assets</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <AssetsTable assets={spotAssets} isLoading={isLoading} />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                  <TabsContent value="spot">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Spot Assets</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <AssetsTable assets={spotAssets} isLoading={isLoading} />
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
 
-                <TabsContent value="margin">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Margin Assets</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <AssetsTable assets={marginAssets} isLoading={isLoading} />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+                  <TabsContent value="margin">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Margin Assets</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <AssetsTable assets={marginAssets} isLoading={isLoading} />
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </>
             )}
           </div>
         </main>
