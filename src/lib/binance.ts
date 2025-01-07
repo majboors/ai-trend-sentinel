@@ -17,12 +17,13 @@ interface MarginBalance {
 
 export async function fetchBinanceBalances() {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (!session) {
-      throw new Error('No authenticated session found');
-    }
+    if (sessionError) throw new Error(`Session error: ${sessionError.message}`);
+    if (!session) throw new Error('No authenticated session found');
+    if (!session.access_token) throw new Error('No access token found in session');
 
+    console.log('Fetching spot balances...');
     const { data: spotBalances, error: spotError } = await supabase.functions.invoke(
       'fetch-binance-spot',
       {
@@ -32,8 +33,12 @@ export async function fetchBinanceBalances() {
       }
     );
 
-    if (spotError) throw spotError;
+    if (spotError) {
+      console.error('Spot balance error:', spotError);
+      throw spotError;
+    }
 
+    console.log('Fetching margin balances...');
     const { data: marginBalances, error: marginError } = await supabase.functions.invoke(
       'fetch-binance-margin',
       {
@@ -43,7 +48,10 @@ export async function fetchBinanceBalances() {
       }
     );
 
-    if (marginError) throw marginError;
+    if (marginError) {
+      console.error('Margin balance error:', marginError);
+      throw marginError;
+    }
     
     return {
       spot: spotBalances,

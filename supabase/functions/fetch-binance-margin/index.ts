@@ -36,6 +36,7 @@ serve(async (req) => {
     // Get the authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
+      console.error('Missing authorization header')
       throw new Error('Missing authorization header')
     }
 
@@ -44,8 +45,14 @@ serve(async (req) => {
       authHeader.replace('Bearer ', '')
     )
 
-    if (userError || !user) {
-      throw userError || new Error('User not found')
+    if (userError) {
+      console.error('User error:', userError)
+      throw userError
+    }
+
+    if (!user) {
+      console.error('No user found')
+      throw new Error('User not found')
     }
 
     console.log('Authenticated user:', user.id)
@@ -54,6 +61,7 @@ serve(async (req) => {
     const apiSecret = Deno.env.get('BINANCE_API_SECRET')
 
     if (!apiKey || !apiSecret) {
+      console.error('Missing API credentials')
       throw new Error('Missing API credentials')
     }
 
@@ -61,6 +69,7 @@ serve(async (req) => {
     const queryString = `timestamp=${timestamp}`
     const signature = await cryptoSign(queryString, apiSecret)
 
+    console.log('Fetching Binance margin account data...')
     const response = await fetch(
       `https://api.binance.com/sapi/v1/margin/account?${queryString}&signature=${signature}`,
       {
@@ -77,12 +86,14 @@ serve(async (req) => {
     }
 
     const data = await response.json()
+    console.log('Successfully fetched Binance margin data')
 
     // Store balances in the database
     const userAssets = data.userAssets.filter((asset: any) => 
       parseFloat(asset.free) > 0 || parseFloat(asset.locked) > 0
     )
 
+    console.log('Storing margin assets in database...')
     for (const asset of userAssets) {
       const { error: upsertError } = await supabaseClient
         .from('assets')
