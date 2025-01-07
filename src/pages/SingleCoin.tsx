@@ -78,18 +78,49 @@ const SingleCoin = () => {
         return;
       }
 
+      // First, get or create a prediction view
+      let viewId: string;
+      const { data: existingView } = await supabase
+        .from('prediction_views')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (existingView) {
+        viewId = existingView.id;
+      } else {
+        // Create a new prediction view if none exists
+        const { data: newView, error: viewError } = await supabase
+          .from('prediction_views')
+          .insert({
+            user_id: session.user.id,
+            name: 'Default View',
+            start_date: new Date().toISOString(),
+            initial_amount: 1000, // Default initial amount
+            current_amount: 1000,
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (viewError) throw viewError;
+        if (!newView) throw new Error('Failed to create prediction view');
+        viewId = newView.id;
+      }
+
+      // Now create the trade with the view_id
       const { data, error } = await supabase
         .from('prediction_trades')
-        .insert([
-          {
-            user_id: session.user.id,
-            symbol: id,
-            entry_price: latestPrice,
-            amount: 1, // Default amount, you might want to make this configurable
-            type: 'BUY',
-            status: 'OPEN'
-          }
-        ])
+        .insert({
+          user_id: session.user.id,
+          view_id: viewId,
+          symbol: id,
+          entry_price: latestPrice,
+          amount: 1, // Default amount
+          type: 'BUY',
+          status: 'OPEN'
+        })
         .select()
         .single();
 
@@ -100,7 +131,7 @@ const SingleCoin = () => {
         description: "Trade saved successfully",
       });
 
-      // Navigate to predictions overview to see the saved trade
+      // Navigate to predictions overview
       navigate('/predictions');
     } catch (error) {
       console.error('Error saving trade:', error);
