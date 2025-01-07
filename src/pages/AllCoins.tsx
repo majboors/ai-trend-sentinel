@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { CoinFolderView } from "@/components/coins/CoinFolderView";
@@ -8,6 +9,8 @@ import { LayoutGrid, Split } from "lucide-react";
 
 const AllCoins = () => {
   const [viewMode, setViewMode] = useState<"folder" | "split">("folder");
+  const [searchParams] = useSearchParams();
+  const filter = searchParams.get("filter");
 
   return (
     <SidebarProvider>
@@ -16,7 +19,9 @@ const AllCoins = () => {
         <main className="flex-1 p-4 md:p-8">
           <div className="container mx-auto max-w-7xl">
             <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl md:text-3xl font-bold">All Coins</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">
+                {filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Coins` : "All Coins"}
+              </h1>
               <div className="flex gap-2">
                 <Button
                   variant={viewMode === "folder" ? "default" : "outline"}
@@ -35,7 +40,10 @@ const AllCoins = () => {
               </div>
             </div>
             
-            {viewMode === "folder" ? <CoinFolderView /> : <CoinSplitView />}
+            {viewMode === "folder" ? 
+              <CoinFolderView filter={filter} /> : 
+              <CoinSplitView filter={filter} />
+            }
           </div>
         </main>
       </div>

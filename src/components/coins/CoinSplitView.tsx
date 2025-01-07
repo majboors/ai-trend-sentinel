@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -30,16 +31,28 @@ const mockCoins = [
   },
 ];
 
-export function CoinSplitView() {
+interface CoinSplitViewProps {
+  filter?: string | null;
+}
+
+export function CoinSplitView({ filter }: CoinSplitViewProps) {
   const [hoveredCoin, setHoveredCoin] = useState<number | null>(null);
-  const profitCoins = mockCoins.filter((coin) => coin.profit);
-  const lossCoins = mockCoins.filter((coin) => !coin.profit);
+  const navigate = useNavigate();
+
+  const filteredCoins = mockCoins.filter((coin) => {
+    if (!filter) return true;
+    return filter === "profit" ? coin.profit : !coin.profit;
+  });
+
+  const profitCoins = filteredCoins.filter((coin) => coin.profit);
+  const lossCoins = filteredCoins.filter((coin) => !coin.profit);
 
   const CoinCard = ({ coin }: { coin: typeof mockCoins[0] }) => (
     <Card
       className="p-4 h-[200px] cursor-pointer transition-all hover:shadow-lg"
       onMouseEnter={() => setHoveredCoin(coin.id)}
       onMouseLeave={() => setHoveredCoin(null)}
+      onClick={() => navigate(`/coins/${coin.id}`)}
     >
       <div className="flex justify-between items-start mb-2">
         <div>
@@ -77,6 +90,14 @@ export function CoinSplitView() {
       )}
     </Card>
   );
+
+  if (filteredCoins.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No coins found matching the selected filter.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-2 gap-4">

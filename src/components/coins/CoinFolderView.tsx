@@ -10,7 +10,11 @@ const mockCoins = [
   { id: 3, name: "Cardano", symbol: "ADA", profit: true },
 ];
 
-export function CoinFolderView() {
+interface CoinFolderViewProps {
+  filter?: string | null;
+}
+
+export function CoinFolderView({ filter }: CoinFolderViewProps) {
   const [openFolder, setOpenFolder] = useState<number | null>(null);
   const navigate = useNavigate();
 
@@ -18,9 +22,22 @@ export function CoinFolderView() {
     navigate(`/coins/${coinId}`);
   };
 
+  const filteredCoins = mockCoins.filter((coin) => {
+    if (!filter) return true;
+    return filter === "profit" ? coin.profit : !coin.profit;
+  });
+
+  if (filteredCoins.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No coins found matching the selected filter.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {mockCoins.map((coin) => (
+      {filteredCoins.map((coin) => (
         <Card
           key={coin.id}
           className={`p-4 cursor-pointer hover:shadow-lg transition-all ${
