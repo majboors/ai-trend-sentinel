@@ -45,18 +45,23 @@ export async function fetchBinanceBalances() {
         if (parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0) {
           const { error: upsertError } = await supabase
             .from('assets')
-            .upsert({
-              user_id: session.user.id,
-              symbol: balance.asset,
-              free: parseFloat(balance.free),
-              locked: parseFloat(balance.locked),
-              account_type: 'spot',
-            }, {
-              onConflict: 'user_id,symbol,account_type'
-            });
+            .upsert(
+              {
+                user_id: session.user.id,
+                symbol: balance.asset,
+                free: parseFloat(balance.free),
+                locked: parseFloat(balance.locked),
+                account_type: 'spot',
+                last_updated: new Date().toISOString(),
+              },
+              {
+                onConflict: 'user_id,symbol,account_type'
+              }
+            );
 
           if (upsertError) {
             console.error('Error upserting spot asset:', upsertError);
+            throw upsertError;
           }
         }
       }
@@ -85,18 +90,23 @@ export async function fetchBinanceBalances() {
         if (parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0) {
           const { error: upsertError } = await supabase
             .from('assets')
-            .upsert({
-              user_id: session.user.id,
-              symbol: balance.asset,
-              free: parseFloat(balance.free),
-              locked: parseFloat(balance.locked),
-              account_type: 'margin',
-            }, {
-              onConflict: 'user_id,symbol,account_type'
-            });
+            .upsert(
+              {
+                user_id: session.user.id,
+                symbol: balance.asset,
+                free: parseFloat(balance.free),
+                locked: parseFloat(balance.locked),
+                account_type: 'margin',
+                last_updated: new Date().toISOString(),
+              },
+              {
+                onConflict: 'user_id,symbol,account_type'
+              }
+            );
 
           if (upsertError) {
             console.error('Error upserting margin asset:', upsertError);
+            throw upsertError;
           }
         }
       }
