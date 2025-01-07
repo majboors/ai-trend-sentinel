@@ -28,16 +28,31 @@ const cryptoSign = async (message: string, secret: string): Promise<string> => {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
+    console.log('Starting Binance margin balance fetch...')
+    
+    // Check for required environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const binanceApiKey = Deno.env.get('BINANCE_API_KEY')
+    const binanceApiSecret = Deno.env.get('BINANCE_API_SECRET')
 
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('Missing Supabase credentials')
+      throw new Error('Missing Supabase credentials')
+    }
+
+    if (!binanceApiKey || !binanceApiSecret) {
+      console.error('Missing Binance API credentials')
+      throw new Error('Missing Binance API credentials')
+    }
+
+    // Initialize Supabase client
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey)
+    
     // Get the authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
@@ -50,21 +65,15 @@ serve(async (req) => {
     )
 
     if (userError || !user) {
+      console.error('User authentication error:', userError)
       throw userError || new Error('User not found')
     }
 
     console.log('Authenticated user:', user.id)
 
-    const apiKey = Deno.env.get('BINANCE_API_KEY')
-    const apiSecret = Deno.env.get('BINANCE_API_SECRET')
-
-    if (!apiKey || !apiSecret) {
-      throw new Error('Missing API credentials')
-    }
-
     const timestamp = Date.now()
     const queryString = `timestamp=${timestamp}`
-    const signature = await cryptoSign(queryString, apiSecret)
+    const signature = await cryptoSign(queryString, binanceApiSecret)
 
     console.log('Making request to Binance API...')
     
@@ -72,8 +81,7 @@ serve(async (req) => {
       `https://api.binance.com/sapi/v1/margin/account?${queryString}&signature=${signature}`,
       {
         headers: {
-          'X-MBX-APIKEY': apiKey,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          'X-MBX-APIKEY': binanceApiKey,
         },
       }
     )
@@ -85,27 +93,33 @@ serve(async (req) => {
     }
 
     const data = await response.json()
+    console.log('Successfully received Binance margin response')
 
-    // Store balances in the database
+    // Filter and store balances
     const userAssets = data.userAssets.filter((asset: any) => 
       parseFloat(asset.free) > 0 || parseFloat(asset.locked) > 0
     )
 
+    console.log(`Found ${userAssets.length} non-zero margin balances`)
+
+    // Store in database
     for (const asset of userAssets) {
       const { error: upsertError } = await supabaseClient
         .from('assets')
         .upsert({
           user_id: user.id,
           symbol: asset.asset,
-          free: asset.free,
-          locked: asset.locked,
+          free: parseFloat(asset.free),
+          locked: parseFloat(asset.locked),
           account_type: 'margin',
+          last_updated: new Date().toISOString(),
         }, {
           onConflict: 'user_id,symbol,account_type'
         })
 
       if (upsertError) {
-        console.error('Error upserting asset:', upsertError)
+        console.error('Error upserting margin asset:', upsertError)
+        throw upsertError
       }
     }
 
@@ -119,10 +133,13 @@ serve(async (req) => {
   } catch (error) {
     console.error('Function error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error instanceof Error ? error.stack : undefined
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       },
     )
   }
