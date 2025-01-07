@@ -3,8 +3,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface Asset {
   symbol: string;
-  free: string;
-  locked: string;
+  free: number;
+  locked: number;
   account_type: string;
 }
 
@@ -42,10 +42,10 @@ export const AssetsTable = ({ assets, isLoading }: AssetsTableProps) => {
         {assets.map((asset) => (
           <TableRow key={`${asset.symbol}-${asset.account_type}`}>
             <TableCell className="font-medium">{asset.symbol}</TableCell>
-            <TableCell className="text-right">{parseFloat(asset.free).toFixed(8)}</TableCell>
-            <TableCell className="text-right">{parseFloat(asset.locked).toFixed(8)}</TableCell>
+            <TableCell className="text-right">{asset.free.toFixed(8)}</TableCell>
+            <TableCell className="text-right">{asset.locked.toFixed(8)}</TableCell>
             <TableCell className="text-right">
-              {(parseFloat(asset.free) + parseFloat(asset.locked)).toFixed(8)}
+              {(asset.free + asset.locked).toFixed(8)}
             </TableCell>
           </TableRow>
         ))}
