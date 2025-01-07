@@ -35,7 +35,18 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
       return [];
     }
     
-    const filteredTrades = filter ? trades.filter(filter) : trades;
+    // Ensure all trades have required fields before processing
+    const validTrades = trades.filter(trade => {
+      if (!trade.created_at || trade.profit_loss === null || trade.profit_loss === undefined) {
+        console.log('Invalid trade data:', trade);
+        return false;
+      }
+      return true;
+    });
+    
+    console.log('Valid trades to process:', validTrades);
+    
+    const filteredTrades = filter ? validTrades.filter(filter) : validTrades;
     console.log('Filtered trades:', filteredTrades);
     
     if (filteredTrades.length === 0) {
@@ -50,12 +61,7 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
     
     // Group trades by date and calculate cumulative value
     const groupedData = sortedTrades.reduce((acc: ChartData[], trade) => {
-      if (!trade.created_at || !trade.profit_loss) {
-        console.log('Skipping trade due to missing data:', trade);
-        return acc;
-      }
-
-      const date = new Date(trade.created_at).toLocaleDateString();
+      const date = new Date(trade.created_at!).toLocaleDateString();
       const profitLoss = Number(trade.profit_loss);
 
       if (isNaN(profitLoss)) {
@@ -146,6 +152,7 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
     };
   }, [filter, toast]);
 
+  // Only show no data message if we really have no data
   if (!data || data.length === 0) {
     console.log('No data available for rendering');
     return (
