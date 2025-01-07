@@ -3,6 +3,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Area, AreaChart, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface PredictionData {
   symbol: string;
@@ -11,22 +13,55 @@ interface PredictionData {
 }
 
 export const AssetsOverview = () => {
-  const { data: predictions = [], isLoading } = useQuery({
+  const { toast } = useToast();
+  const { data: predictions = [], isLoading, refetch } = useQuery({
     queryKey: ['prediction-trades'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('prediction_trades')
         .select('*')
-        .order('created_at', { ascending: true });
+        .order('profit_loss', { ascending: false });
       
       if (error) throw error;
       return data || [];
     }
   });
 
-  // Prepare data for the charts
-  const profitTrades = predictions.filter((trade) => (trade.profit_loss || 0) > 0);
-  const lossTrades = predictions.filter((trade) => (trade.profit_loss || 0) < 0);
+  // Subscribe to real-time updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'prediction_trades'
+        },
+        (payload) => {
+          console.log('Real-time update:', payload);
+          refetch();
+          toast({
+            title: "Trading View Updated",
+            description: "Latest profit/loss data has been refreshed.",
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch, toast]);
+
+  // Prepare data for the charts - sort by profit/loss
+  const profitTrades = predictions
+    .filter((trade) => (trade.profit_loss || 0) > 0)
+    .sort((a, b) => (b.profit_loss || 0) - (a.profit_loss || 0));
+
+  const lossTrades = predictions
+    .filter((trade) => (trade.profit_loss || 0) < 0)
+    .sort((a, b) => (a.profit_loss || 0) - (b.profit_loss || 0));
 
   const profitData = profitTrades.map((trade) => ({
     name: trade.symbol,
@@ -35,7 +70,7 @@ export const AssetsOverview = () => {
 
   const lossData = lossTrades.map((trade) => ({
     name: trade.symbol,
-    value: Math.abs(trade.profit_loss || 0), // Use absolute value for better visualization
+    value: Math.abs(trade.profit_loss || 0),
   }));
 
   const chartConfig = {
@@ -55,7 +90,7 @@ export const AssetsOverview = () => {
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle>Profitable Trades Distribution</CardTitle>
+          <CardTitle>Top Profitable Trades</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
@@ -80,7 +115,7 @@ export const AssetsOverview = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Loss Trades Distribution</CardTitle>
+          <CardTitle>Largest Loss Trades</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
