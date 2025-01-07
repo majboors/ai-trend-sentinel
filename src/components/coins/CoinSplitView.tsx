@@ -30,7 +30,7 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
   const { data: coins = [], isLoading, error } = useQuery({
     queryKey: ['coins'],
     queryFn: async () => {
-      console.log('Starting to fetch coins...');
+      console.log('Starting to fetch coins in split view...');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.error('No session found');
@@ -56,7 +56,6 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
       }
 
       console.log(`Successfully fetched ${response.data.length} trading pairs`);
-      console.log('Sample coin data:', response.data[0]);
       return response.data;
     },
     refetchInterval: 30000,
@@ -77,6 +76,18 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-2 gap-4">
+        {[...Array(6)].map((_, i) => (
+          <Card key={i} className="p-4 h-[200px]">
+            <Skeleton className="h-full" />
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
   const filteredCoins = (coins as CoinData[]).filter((coin: CoinData) => {
     if (!filter) return true;
     return filter === "profit" ? coin.profit : !coin.profit;
@@ -84,6 +95,16 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
 
   const profitCoins = filteredCoins.filter((coin: CoinData) => coin.profit);
   const lossCoins = filteredCoins.filter((coin: CoinData) => !coin.profit);
+
+  console.log(`Split view rendering ${profitCoins.length} profit coins and ${lossCoins.length} loss coins`);
+
+  if (filteredCoins.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No coins found matching the selected filter.</p>
+      </div>
+    );
+  }
 
   const CoinCard = ({ coin }: { coin: CoinData }) => (
     <Card
@@ -136,29 +157,6 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
       )}
     </Card>
   );
-
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-2 gap-4">
-        {[...Array(6)].map((_, i) => (
-          <Card key={i} className="p-4 h-[200px]">
-            <Skeleton className="h-full" />
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
-  if (filteredCoins.length === 0) {
-    console.log('No coins found after filtering');
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No coins found matching the selected filter.</p>
-      </div>
-    );
-  }
-
-  console.log(`Rendering ${profitCoins.length} profit coins and ${lossCoins.length} loss coins`);
 
   return (
     <div className="grid grid-cols-2 gap-4">
