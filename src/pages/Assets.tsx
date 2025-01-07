@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,23 @@ import { useToast } from "@/hooks/use-toast";
 
 const Assets = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to view your assets.",
+          variant: "destructive",
+        });
+        navigate("/");
+      }
+    };
+    checkAuth();
+  }, [navigate, toast]);
 
   const { data: assets, isLoading, error } = useQuery({
     queryKey: ["assets"],
@@ -43,6 +61,52 @@ const Assets = () => {
 
   const spotAssets = assets?.filter((asset) => asset.account_type === "spot") || [];
   const marginAssets = assets?.filter((asset) => asset.account_type === "margin") || [];
+
+  if (isLoading) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <DashboardSidebar />
+          <main className="flex-1 p-4 md:p-8">
+            <div className="container mx-auto max-w-7xl">
+              <div className="flex items-center justify-between mb-6 md:mb-8">
+                <Skeleton className="h-8 w-32" />
+                <SidebarTrigger className="md:hidden" />
+              </div>
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  if (error) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <DashboardSidebar />
+          <main className="flex-1 p-4 md:p-8">
+            <div className="container mx-auto max-w-7xl">
+              <div className="flex items-center justify-between mb-6 md:mb-8">
+                <h1 className="text-2xl md:text-3xl font-bold">Assets</h1>
+                <SidebarTrigger className="md:hidden" />
+              </div>
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-destructive">Failed to load assets. Please try refreshing the page.</p>
+                </CardContent>
+              </Card>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    );
+  }
 
   return (
     <SidebarProvider>
