@@ -21,7 +21,7 @@ import {
   Settings,
   ShoppingBag,
   ShoppingCart,
-  Swap,
+  ArrowLeftRight,
   TrendingDown,
   TrendingUp,
   Wallet,
@@ -58,7 +58,7 @@ const menuItems = [
   },
   {
     title: "Trading",
-    icon: Swap,
+    icon: ArrowLeftRight,
     items: [
       { title: "Bought", icon: ShoppingCart, url: "/trading/bought" },
       { title: "Sold", icon: ShoppingBag, url: "/trading/sold" },
