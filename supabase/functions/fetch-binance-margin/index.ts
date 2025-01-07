@@ -66,7 +66,7 @@ serve(async (req) => {
     const queryString = `timestamp=${timestamp}`
     const signature = await cryptoSign(queryString, apiSecret)
 
-    console.log('Making request to Binance API from Singapore region...')
+    console.log('Making request to Binance API...')
     
     const response = await fetch(
       `https://api.binance.com/sapi/v1/margin/account?${queryString}&signature=${signature}`,

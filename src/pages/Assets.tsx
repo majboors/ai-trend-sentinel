@@ -44,9 +44,11 @@ const Assets = () => {
         
         // Then fetch from our database
         const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          console.log('Current session user ID:', session.user.id);
+        if (!session) {
+          throw new Error('No authenticated session found');
         }
+        
+        console.log('Current session user ID:', session.user.id);
         
         const { data, error } = await supabase
           .from("assets")
