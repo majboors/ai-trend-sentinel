@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ export const ApiKeysManager = () => {
       const { data, error } = await supabase
         .from("api_keys")
         .select("binance_api_key, binance_api_secret")
+        .eq('user_id', session.user.id)
         .single();
 
       if (error) throw error;
@@ -40,7 +41,7 @@ export const ApiKeysManager = () => {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     fetchApiKeys();
   }, []);
 
