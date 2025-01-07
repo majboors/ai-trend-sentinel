@@ -30,10 +30,17 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
   const { toast } = useToast();
 
   const processTradesData = (trades: PredictionTrade[]) => {
+    if (!trades || trades.length === 0) return [];
+    
     const filteredTrades = filter ? trades.filter(filter) : trades;
     
+    // Sort trades by date first
+    const sortedTrades = filteredTrades.sort((a, b) => 
+      new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime()
+    );
+    
     // Group trades by date and calculate cumulative value
-    const groupedData = filteredTrades.reduce((acc: ChartData[], trade) => {
+    const groupedData = sortedTrades.reduce((acc: ChartData[], trade) => {
       const date = new Date(trade.created_at || '').toLocaleDateString();
       const existingPoint = acc.find(point => point.date === date);
 
@@ -55,13 +62,12 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
       cumulative += point.value;
       return {
         date: point.date,
-        value: Number(cumulative.toFixed(2)) // Format to 2 decimal places
+        value: Number(cumulative.toFixed(2))
       };
     });
   };
 
   useEffect(() => {
-    // Initial fetch
     const fetchData = async () => {
       try {
         const { data: trades, error } = await supabase
@@ -71,7 +77,9 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
 
         if (error) throw error;
 
+        console.log('Fetched trades:', trades); // Debug log
         const chartData = processTradesData(trades || []);
+        console.log('Processed chart data:', chartData); // Debug log
         setData(chartData);
       } catch (error) {
         console.error('Error fetching performance data:', error);
@@ -95,26 +103,12 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
           schema: 'public',
           table: 'prediction_trades'
         },
-        async (payload) => {
-          console.log('Real-time update received:', payload);
-          // Refetch all data to recalculate cumulative values
-          const { data: trades, error } = await supabase
-            .from('prediction_trades')
-            .select('*')
-            .order('created_at', { ascending: true });
-
-          if (error) {
-            console.error('Error fetching updated data:', error);
-            return;
-          }
-
-          const chartData = processTradesData(trades || []);
-          setData(chartData);
+        async () => {
+          fetchData(); // Refetch data on any changes
         }
       )
       .subscribe();
 
-    // Cleanup subscription
     return () => {
       supabase.removeChannel(channel);
     };

@@ -19,10 +19,18 @@ export const AssetsOverview = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('prediction_trades')
-        .select('*')
-        .order('profit_loss', { ascending: false });
+        .select(`
+          *,
+          prediction_views (
+            name,
+            initial_amount,
+            current_amount
+          )
+        `)
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
+      console.log('Fetched prediction trades:', data); // Debug log
       return data || [];
     }
   });
