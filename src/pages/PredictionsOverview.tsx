@@ -58,6 +58,30 @@ export default function PredictionsOverview() {
     return initial > 0 ? ((current - initial) / initial) * 100 : 0;
   };
 
+  const getTotalProfits = () => {
+    return views.reduce((sum, view) => {
+      const profit = Number(view.current_amount) - Number(view.initial_amount);
+      return sum + (profit > 0 ? profit : 0);
+    }, 0);
+  };
+
+  const getTotalLosses = () => {
+    return views.reduce((sum, view) => {
+      const loss = Number(view.current_amount) - Number(view.initial_amount);
+      return sum + (loss < 0 ? loss : 0);
+    }, 0);
+  };
+
+  const getProfitPercentage = () => {
+    const initial = getTotalInitialAmount();
+    return initial > 0 ? (getTotalProfits() / initial) * 100 : 0;
+  };
+
+  const getLossPercentage = () => {
+    const initial = getTotalInitialAmount();
+    return initial > 0 ? (getTotalLosses() / initial) * 100 : 0;
+  };
+
   return (
     <SidebarProvider>
       <div className="flex h-screen">
@@ -82,14 +106,14 @@ export default function PredictionsOverview() {
                   percentage={0}
                 />
                 <ProfitLossCard
-                  title="Total Current Value"
-                  value={getTotalCurrentAmount()}
-                  percentage={getProfitLossPercentage()}
+                  title="Total Profits"
+                  value={getTotalProfits()}
+                  percentage={getProfitPercentage()}
                 />
                 <ProfitLossCard
-                  title="Active Predictions"
-                  value={views.filter(v => v.status === 'active').length}
-                  percentage={0}
+                  title="Total Losses"
+                  value={getTotalLosses()}
+                  percentage={getLossPercentage()}
                 />
               </div>
 
