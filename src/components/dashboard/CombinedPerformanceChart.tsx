@@ -56,11 +56,13 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
     }
 
     // Group trades by date and calculate cumulative value
+    const groupedData: { [key: string]: number } = {};
     let cumulative = 0;
-    const groupedData = filteredTrades.reduce((acc: ChartData[], trade) => {
+
+    filteredTrades.forEach(trade => {
       if (!trade.created_at || trade.profit_loss === null || trade.profit_loss === undefined) {
         console.log('Invalid trade data:', trade);
-        return acc;
+        return;
       }
 
       const date = new Date(trade.created_at).toLocaleDateString();
@@ -68,22 +70,22 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
 
       if (isNaN(profitLoss)) {
         console.log('Invalid profit/loss value:', trade);
-        return acc;
+        return;
       }
 
       cumulative += profitLoss;
+      groupedData[date] = cumulative;
       console.log(`Date: ${date}, ProfitLoss: ${profitLoss}, Cumulative: ${cumulative}`);
-      
-      acc.push({
-        date,
-        value: Number(cumulative.toFixed(2))
-      });
+    });
 
-      return acc;
-    }, []);
+    // Convert grouped data to chart format
+    const chartData = Object.entries(groupedData).map(([date, value]) => ({
+      date,
+      value: Number(value.toFixed(2))
+    }));
 
-    console.log('Final processed chart data:', groupedData);
-    return groupedData;
+    console.log('Final processed chart data:', chartData);
+    return chartData;
   };
 
   useEffect(() => {
@@ -92,8 +94,7 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
         console.log('Fetching trades data for viewId:', viewId);
         let query = supabase
           .from('prediction_trades')
-          .select('*')
-          .order('created_at', { ascending: true });
+          .select('*');
 
         // If we have a viewId, filter by it
         if (viewId) {
