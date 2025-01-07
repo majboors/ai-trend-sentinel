@@ -23,6 +23,7 @@ import {
   ShoppingCart,
   ArrowLeftRight,
   Wallet,
+  TrendingUp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -55,6 +56,7 @@ const menuItems = [
     items: [
       { title: "Bought", icon: ShoppingCart, url: "/trading/bought" },
       { title: "Sold", icon: ShoppingBag, url: "/trading/sold" },
+      { title: "Volatile", icon: TrendingUp, url: "/trading/volatile" },
     ],
   },
   {
