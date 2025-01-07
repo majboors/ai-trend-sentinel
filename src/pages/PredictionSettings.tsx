@@ -9,16 +9,9 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { Database } from "@/integrations/supabase/types";
 
-interface PredictionView {
-  id: string;
-  name: string;
-  start_date: string;
-  initial_amount: number;
-  current_amount: number;
-  status: 'active' | 'completed' | 'cancelled';
-  created_at: string;
-}
+type PredictionView = Database['public']['Tables']['prediction_views']['Row'];
 
 export default function PredictionSettings() {
   const [name, setName] = useState<string>("");
@@ -64,15 +57,23 @@ export default function PredictionSettings() {
 
     setLoading(true);
     try {
+      // Get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("No authenticated user found");
+      }
+
       const { data, error } = await supabase
         .from('prediction_views')
-        .insert([{
+        .insert({
           name,
           start_date: startDate,
           initial_amount: parseFloat(initialAmount),
           current_amount: parseFloat(initialAmount),
-          status: 'active'
-        }])
+          status: 'active' as const, // Explicitly type as 'active'
+          user_id: user.id // Add the user_id
+        })
         .select()
         .single();
 
