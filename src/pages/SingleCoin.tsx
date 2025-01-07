@@ -12,6 +12,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,10 +45,29 @@ const SingleCoin = () => {
         low: parseFloat(item[3]),
         close: parseFloat(item[4]),
         volume: parseFloat(item[5]),
+        ma7: 0, // We'll calculate these after getting the data
+        ma25: 0,
+        ma99: 0,
       }));
     },
     refetchInterval: 30000,
   });
+
+  // Calculate moving averages
+  const calculateMA = (data: any[], period: number) => {
+    const result = [...data];
+    for (let i = period - 1; i < data.length; i++) {
+      const sum = data
+        .slice(i - period + 1, i + 1)
+        .reduce((acc, curr) => acc + curr.close, 0);
+      result[i][`ma${period}`] = sum / period;
+    }
+    return result;
+  };
+
+  const processedData = klines.length > 0
+    ? calculateMA(calculateMA(calculateMA(klines, 7), 25), 99)
+    : [];
 
   return (
     <SidebarProvider>
@@ -80,16 +100,39 @@ const SingleCoin = () => {
               ) : (
                 <div className="h-[500px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={klines}>
+                    <LineChart data={processedData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="time" />
                       <YAxis domain={['auto', 'auto']} />
                       <Tooltip />
+                      <Legend />
                       <Line
                         type="monotone"
                         dataKey="close"
                         stroke="hsl(var(--primary))"
                         dot={false}
+                        name="Price"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="ma7"
+                        stroke="#22c55e"
+                        dot={false}
+                        name="MA7"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="ma25"
+                        stroke="#eab308"
+                        dot={false}
+                        name="MA25"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="ma99"
+                        stroke="#ef4444"
+                        dot={false}
+                        name="MA99"
                       />
                     </LineChart>
                   </ResponsiveContainer>
