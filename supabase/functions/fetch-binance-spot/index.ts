@@ -42,7 +42,7 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
     // Get the authorization header
@@ -96,12 +96,33 @@ serve(async (req) => {
     const data = await response.json()
     console.log('Successfully received Binance response')
 
-    // Filter and return balances
+    // Filter and store balances
     const balances = data.balances.filter((balance: any) => 
       parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0
     )
 
     console.log(`Found ${balances.length} non-zero balances`)
+
+    // Store in database
+    for (const balance of balances) {
+      const { error: upsertError } = await supabaseClient
+        .from('assets')
+        .upsert({
+          user_id: user.id,
+          symbol: balance.asset,
+          free: parseFloat(balance.free),
+          locked: parseFloat(balance.locked),
+          account_type: 'spot',
+          last_updated: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,symbol,account_type'
+        })
+
+      if (upsertError) {
+        console.error('Error upserting balance:', upsertError)
+        throw upsertError
+      }
+    }
 
     return new Response(
       JSON.stringify(balances),
