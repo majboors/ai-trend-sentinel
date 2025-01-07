@@ -25,7 +25,7 @@ const Assets = () => {
           variant: "destructive",
         });
         navigate("/");
-      } else {
+      } else if (session.user) {
         console.log("Authenticated user ID:", session.user.id);
       }
     };
@@ -43,8 +43,10 @@ const Assets = () => {
         console.log('Binance balances fetched:', binanceData);
         
         // Then fetch from our database
-        const { data: session } = await supabase.auth.getSession();
-        console.log('Current session user ID:', session?.user?.id);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          console.log('Current session user ID:', session.user.id);
+        }
         
         const { data, error } = await supabase
           .from("assets")
