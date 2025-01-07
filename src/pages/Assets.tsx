@@ -9,6 +9,7 @@ import { fetchBinanceBalances } from "@/lib/binance";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AssetsTable } from "@/components/assets/AssetsTable";
+import { ApiKeysManager } from "@/components/assets/ApiKeysManager";
 
 const Assets = () => {
   const { toast } = useToast();
@@ -77,9 +78,6 @@ const Assets = () => {
   const spotAssets = assets?.filter((asset) => asset.account_type === "spot") || [];
   const marginAssets = assets?.filter((asset) => asset.account_type === "margin") || [];
 
-  console.log("Filtered spot assets:", spotAssets);
-  console.log("Filtered margin assets:", marginAssets);
-
   if (error) {
     return (
       <SidebarProvider>
@@ -112,6 +110,10 @@ const Assets = () => {
             <div className="flex items-center justify-between mb-6 md:mb-8">
               <h1 className="text-2xl md:text-3xl font-bold">Assets</h1>
               <SidebarTrigger className="md:hidden" />
+            </div>
+
+            <div className="mb-6">
+              <ApiKeysManager />
             </div>
 
             <Tabs defaultValue="spot" className="space-y-4">

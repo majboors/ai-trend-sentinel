@@ -1,180 +1,116 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.1.0"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-const cryptoSign = async (message: string, secret: string): Promise<string> => {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  )
-  const signature = await crypto.subtle.sign(
-    'HMAC',
-    key,
-    new TextEncoder().encode(message)
-  )
-  return Array.from(new Uint8Array(signature))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-}
+console.log("Hello from fetch-binance-margin!");
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    console.log('Starting Binance isolated margin balance fetch...')
-    
-    // Check for required environment variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    const binanceApiKey = Deno.env.get('BINANCE_API_KEY')
-    const binanceApiSecret = Deno.env.get('BINANCE_API_SECRET')
+    // Create a Supabase client with the Auth context of the logged in user
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: {
+          headers: { Authorization: req.headers.get("Authorization")! },
+        },
+      }
+    );
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      console.error('Missing Supabase credentials')
-      throw new Error('Missing Supabase credentials')
+    // Get the user's API keys
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error("No user found");
+
+    const { data: apiKeys, error: apiKeysError } = await supabaseClient
+      .from("api_keys")
+      .select("binance_api_key, binance_api_secret")
+      .eq("user_id", user.id)
+      .single();
+
+    if (apiKeysError || !apiKeys) {
+      throw new Error("No API keys found");
     }
 
-    if (!binanceApiKey || !binanceApiSecret) {
-      console.error('Missing Binance API credentials')
-      throw new Error('Missing Binance API credentials')
-    }
+    // Fetch isolated margin account information from Binance
+    const timestamp = Date.now();
+    const queryString = `timestamp=${timestamp}`;
+    const signature = await createHmac(apiKeys.binance_api_secret, queryString);
 
-    // Initialize Supabase client with service role key for admin access
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
-    
-    // Get the authorization header
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('Missing authorization header')
-    }
-
-    // Get the user from the JWT token
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    )
-
-    if (userError || !user) {
-      console.error('User authentication error:', userError)
-      throw userError || new Error('User not found')
-    }
-
-    console.log('Authenticated user:', user.id)
-
-    const timestamp = Date.now()
-    const queryString = `timestamp=${timestamp}`
-    const signature = await cryptoSign(queryString, binanceApiSecret)
-
-    console.log('Making request to Binance API for isolated margin account...')
-    
     const response = await fetch(
       `https://api.binance.com/sapi/v1/margin/isolated/account?${queryString}&signature=${signature}`,
       {
         headers: {
-          'X-MBX-APIKEY': binanceApiKey,
+          "X-MBX-APIKEY": apiKeys.binance_api_key,
         },
       }
-    )
+    );
 
     if (!response.ok) {
-      const errorData = await response.text()
-      console.error('Binance API error:', errorData)
-      
-      // Return empty array if margin account is not found or not enabled
       if (response.status === 404) {
-        console.log('Margin account not found or not enabled, returning empty array')
-        return new Response(
-          JSON.stringify([]),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-          },
-        )
+        return new Response(JSON.stringify([]), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
       }
-      
-      throw new Error(`Binance API error: ${errorData}`)
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json()
-    console.log('Successfully received Binance isolated margin response')
+    const data = await response.json();
+    const assets: any[] = [];
 
     // Process isolated margin assets
-    const userAssets: any[] = [];
-    if (data.assets) {
-      for (const asset of data.assets) {
-        // Process base asset
-        const baseAsset = {
-          asset: asset.baseAsset.asset,
-          free: parseFloat(asset.baseAsset.free),
-          locked: parseFloat(asset.baseAsset.locked),
-        };
-        if (baseAsset.free > 0 || baseAsset.locked > 0) {
-          userAssets.push(baseAsset);
-        }
+    data.assets.forEach((pair: any) => {
+      const baseAsset = pair.baseAsset;
+      const quoteAsset = pair.quoteAsset;
 
-        // Process quote asset
-        const quoteAsset = {
-          asset: asset.quoteAsset.asset,
-          free: parseFloat(asset.quoteAsset.free),
-          locked: parseFloat(asset.quoteAsset.locked),
-        };
-        if (quoteAsset.free > 0 || quoteAsset.locked > 0) {
-          userAssets.push(quoteAsset);
-        }
+      if (parseFloat(baseAsset.free) > 0 || parseFloat(baseAsset.locked) > 0) {
+        assets.push({
+          asset: baseAsset.asset,
+          free: baseAsset.free,
+          locked: baseAsset.locked,
+        });
       }
-    }
 
-    console.log(`Found ${userAssets.length} non-zero isolated margin balances`)
-
-    // Store in database
-    for (const asset of userAssets) {
-      const { error: upsertError } = await supabaseAdmin
-        .from('assets')
-        .upsert({
-          user_id: user.id,
-          symbol: asset.asset,
-          free: asset.free,
-          locked: asset.locked,
-          account_type: 'margin',
-          last_updated: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,symbol,account_type'
-        })
-
-      if (upsertError) {
-        console.error('Error upserting margin asset:', upsertError)
-        throw upsertError
+      if (parseFloat(quoteAsset.free) > 0 || parseFloat(quoteAsset.locked) > 0) {
+        assets.push({
+          asset: quoteAsset.asset,
+          free: quoteAsset.free,
+          locked: quoteAsset.locked,
+        });
       }
-    }
+    });
 
-    return new Response(
-      JSON.stringify(userAssets),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      },
-    )
+    return new Response(JSON.stringify(assets), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
-    console.error('Function error:', error)
-    return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error instanceof Error ? error.stack : undefined
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      },
-    )
+    console.error("Error:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
   }
-})
+});
+
+async function createHmac(secret: string, message: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(message)
+  );
+  return Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
