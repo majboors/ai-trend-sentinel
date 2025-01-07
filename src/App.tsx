@@ -1,18 +1,18 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
-import { Index } from "@/pages/Index";
-import { AllCoins } from "@/pages/AllCoins";
-import { SingleCoin } from "@/pages/SingleCoin";
-import { PredictionsOverview } from "@/pages/PredictionsOverview";
-import { ProfitPredictions } from "@/pages/ProfitPredictions";
-import { LossPredictions } from "@/pages/LossPredictions";
-import { PredictionSettings } from "@/pages/PredictionSettings";
-import { TradingBought } from "@/pages/TradingBought";
-import { TradingSold } from "@/pages/TradingSold";
-import { TradingVolatile } from "@/pages/TradingVolatile";
-import { Assets } from "@/pages/Assets";
-import { SpentProfits } from "@/pages/SpentProfits";
-import { Leverage } from "@/pages/Leverage";
+import Index from "@/pages/Index";
+import AllCoins from "@/pages/AllCoins";
+import SingleCoin from "@/pages/SingleCoin";
+import PredictionsOverview from "@/pages/PredictionsOverview";
+import ProfitPredictions from "@/pages/ProfitPredictions";
+import LossPredictions from "@/pages/LossPredictions";
+import PredictionSettings from "@/pages/PredictionSettings";
+import TradingBought from "@/pages/TradingBought";
+import TradingSold from "@/pages/TradingSold";
+import TradingVolatile from "@/pages/TradingVolatile";
+import Assets from "@/pages/Assets";
+import SpentProfits from "@/pages/SpentProfits";
+import Leverage from "@/pages/Leverage";
 import "./App.css";
 
 function App() {
