@@ -1,13 +1,61 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { ProfitLossCard } from "@/components/dashboard/ProfitLossCard";
+import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
+import { MarketSentiment } from "@/components/dashboard/MarketSentiment";
+import { WhalesActivity } from "@/components/dashboard/WhalesActivity";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <DashboardSidebar />
+        <main className="flex-1 p-8">
+          <div className="container mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <h1 className="text-3xl font-bold">Dashboard</h1>
+              <SidebarTrigger />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <ProfitLossCard
+                title="Total Profit/Loss"
+                value={5000}
+                percentage={12.5}
+              />
+              <ProfitLossCard
+                title="Today's Change"
+                value={-250}
+                percentage={-2.3}
+              />
+              <ProfitLossCard
+                title="Weekly Profit"
+                value={1200}
+                percentage={5.7}
+              />
+              <ProfitLossCard
+                title="Monthly Profit"
+                value={8500}
+                percentage={15.2}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="lg:col-span-2">
+                <PerformanceChart />
+              </div>
+              <div>
+                <MarketSentiment />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+              <WhalesActivity />
+            </div>
+          </div>
+        </main>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
