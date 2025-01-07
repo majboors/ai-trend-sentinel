@@ -1,8 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
 
-console.log("Starting fetch-binance-trades function");
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -25,6 +27,7 @@ serve(async (req) => {
     // Get the user
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
+      console.error("Authentication error:", userError);
       throw new Error("User not authenticated");
     }
 
@@ -38,15 +41,18 @@ serve(async (req) => {
       .single();
 
     if (apiKeysError || !apiKeys) {
+      console.error("API keys error:", apiKeysError);
       throw new Error("No API keys found");
     }
 
-    console.log("Fetching isolated margin account details");
+    console.log("Successfully retrieved API keys");
 
     // Fetch isolated margin account details
     const timestamp = Date.now();
     const queryString = `timestamp=${timestamp}`;
     const signature = await createHmac(apiKeys.binance_api_secret, queryString);
+
+    console.log("Fetching margin account details");
 
     const marginResponse = await fetch(
       `https://api.binance.com/sapi/v1/margin/isolated/account?${queryString}&signature=${signature}`,
@@ -58,6 +64,7 @@ serve(async (req) => {
     );
 
     if (!marginResponse.ok) {
+      console.error("Binance API error:", marginResponse.statusText);
       throw new Error(`Binance API error: ${marginResponse.statusText}`);
     }
 
@@ -83,7 +90,7 @@ serve(async (req) => {
       );
 
       if (!tradesResponse.ok) {
-        console.error(`Failed to fetch trades for ${symbol}: ${tradesResponse.statusText}`);
+        console.error(`Failed to fetch trades for ${symbol}:`, tradesResponse.statusText);
         continue;
       }
 
@@ -113,10 +120,16 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Error in fetch-binance-trades:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({ 
+        error: error.message,
+        details: error instanceof Error ? error.stack : undefined
+      }), 
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: error.message.includes("not authenticated") ? 401 : 500,
+      }
+    );
   }
 });
 
