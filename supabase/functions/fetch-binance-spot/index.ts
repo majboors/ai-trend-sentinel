@@ -1,10 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 console.log("Hello from fetch-binance-spot!");
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -20,11 +25,15 @@ serve(async (req) => {
       }
     );
 
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
-      console.log("No authenticated user found");
+    // Get authenticated user
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      console.error("Authentication error:", userError);
       return new Response(
-        JSON.stringify({ error: "Authentication required" }),
+        JSON.stringify({ 
+          error: "Authentication required",
+          message: "Please sign in to access this resource"
+        }),
         { 
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -42,7 +51,10 @@ serve(async (req) => {
     if (apiKeysError) {
       console.error("Database error fetching API keys:", apiKeysError);
       return new Response(
-        JSON.stringify({ error: "Failed to fetch API keys from database" }),
+        JSON.stringify({ 
+          error: "Database error",
+          message: "Failed to fetch API keys from database"
+        }),
         { 
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
