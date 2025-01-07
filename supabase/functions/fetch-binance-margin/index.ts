@@ -1,6 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsHeaders } from '../_shared/cors.ts'
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.1.0"
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
 
 const cryptoSign = async (message: string, secret: string): Promise<string> => {
   const key = await crypto.subtle.importKey(
@@ -36,7 +41,6 @@ serve(async (req) => {
     // Get the authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      console.error('Missing authorization header')
       throw new Error('Missing authorization header')
     }
 
@@ -45,14 +49,8 @@ serve(async (req) => {
       authHeader.replace('Bearer ', '')
     )
 
-    if (userError) {
-      console.error('User error:', userError)
-      throw userError
-    }
-
-    if (!user) {
-      console.error('No user found')
-      throw new Error('User not found')
+    if (userError || !user) {
+      throw userError || new Error('User not found')
     }
 
     console.log('Authenticated user:', user.id)
@@ -61,7 +59,6 @@ serve(async (req) => {
     const apiSecret = Deno.env.get('BINANCE_API_SECRET')
 
     if (!apiKey || !apiSecret) {
-      console.error('Missing API credentials')
       throw new Error('Missing API credentials')
     }
 
@@ -69,12 +66,14 @@ serve(async (req) => {
     const queryString = `timestamp=${timestamp}`
     const signature = await cryptoSign(queryString, apiSecret)
 
-    console.log('Fetching Binance margin account data...')
+    console.log('Making request to Binance API from Singapore region...')
+    
     const response = await fetch(
       `https://api.binance.com/sapi/v1/margin/account?${queryString}&signature=${signature}`,
       {
         headers: {
           'X-MBX-APIKEY': apiKey,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         },
       }
     )
@@ -86,14 +85,12 @@ serve(async (req) => {
     }
 
     const data = await response.json()
-    console.log('Successfully fetched Binance margin data')
 
     // Store balances in the database
     const userAssets = data.userAssets.filter((asset: any) => 
       parseFloat(asset.free) > 0 || parseFloat(asset.locked) > 0
     )
 
-    console.log('Storing margin assets in database...')
     for (const asset of userAssets) {
       const { error: upsertError } = await supabaseClient
         .from('assets')
@@ -108,7 +105,7 @@ serve(async (req) => {
         })
 
       if (upsertError) {
-        console.error('Error upserting balance:', upsertError)
+        console.error('Error upserting asset:', upsertError)
       }
     }
 
