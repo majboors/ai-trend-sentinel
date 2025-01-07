@@ -49,8 +49,10 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
       return data;
     },
     refetchInterval: 30000,
-    onError: (error) => {
-      toast.error(`Error fetching coins: ${error.message}`);
+    meta: {
+      onError: (error: Error) => {
+        toast.error(`Error fetching coins: ${error.message}`);
+      },
     },
   });
 
