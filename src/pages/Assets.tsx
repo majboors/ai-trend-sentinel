@@ -12,7 +12,9 @@ import { AssetsTable } from "@/components/assets/AssetsTable";
 import { AssetsOverview } from "@/components/assets/AssetsOverview";
 import { ApiKeysManager } from "@/components/assets/ApiKeysManager";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { Area, AreaChart, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip } from "recharts";
 
 const Assets = () => {
   const { toast } = useToast();
@@ -64,19 +66,9 @@ const Assets = () => {
       if (!hasApiKeys) return [];
       
       try {
-        console.log('Starting asset fetch...');
-        
-        // First, fetch from Binance API and update database
         const binanceData = await fetchBinanceBalances();
-        console.log('Binance balances fetched:', binanceData);
-        
-        // Then fetch from our database
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) {
-          throw new Error('No authenticated session found');
-        }
-        
-        console.log('Current session user ID:', session.user.id);
+        if (!session?.user) throw new Error('No authenticated session found');
         
         const { data, error } = await supabase
           .from("assets")
@@ -84,12 +76,7 @@ const Assets = () => {
           .eq('user_id', session.user.id)
           .order("symbol");
 
-        if (error) {
-          console.error("Supabase query error:", error);
-          throw error;
-        }
-
-        console.log("Successfully fetched assets from database:", data);
+        if (error) throw error;
         return data || [];
       } catch (error) {
         console.error("Error fetching assets:", error);
@@ -100,8 +87,41 @@ const Assets = () => {
     refetchInterval: 30000,
   });
 
+  // Fetch transaction history
+  const { data: transactions = [] } = useQuery({
+    queryKey: ["transactions"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('No authenticated session found');
+
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq('user_id', session.user.id)
+        .order('timestamp', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: hasApiKeys === true,
+  });
+
   const spotAssets = assets?.filter((asset) => asset.account_type === "spot") || [];
   const marginAssets = assets?.filter((asset) => asset.account_type === "margin") || [];
+
+  // Calculate total portfolio value and changes
+  const calculateTotalValue = (assets: any[]) => {
+    return assets.reduce((total, asset) => total + (asset.free + asset.locked), 0);
+  };
+
+  const totalSpotValue = calculateTotalValue(spotAssets);
+  const totalMarginValue = calculateTotalValue(marginAssets);
+
+  // Prepare data for profit/loss chart
+  const profitData = transactions.map((trade) => ({
+    date: new Date(trade.timestamp).toLocaleDateString(),
+    value: trade.type === 'SELL' ? (trade.price * trade.amount) : -(trade.price * trade.amount)
+  }));
 
   if (error) {
     return (
@@ -114,14 +134,10 @@ const Assets = () => {
                 <h1 className="text-2xl md:text-3xl font-bold">Assets</h1>
                 <SidebarTrigger className="md:hidden" />
               </div>
-              <Card>
-                <CardContent className="pt-6">
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>Failed to load assets. Please try refreshing the page.</AlertDescription>
-                  </Alert>
-                </CardContent>
-              </Card>
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>Failed to load assets. Please try refreshing the page.</AlertDescription>
+              </Alert>
             </div>
           </main>
         </div>
@@ -153,8 +169,45 @@ const Assets = () => {
               </Alert>
             ) : (
               <>
-                <AssetsOverview assets={assets || []} isLoading={isLoading} />
-                
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Spot Value</CardTitle>
+                      <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{totalSpotValue.toFixed(2)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Margin Value</CardTitle>
+                      <ArrowDownRight className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{totalMarginValue.toFixed(2)}</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Profit/Loss History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={profitData}>
+                          <XAxis dataKey="date" />
+                          <YAxis />
+                          <Tooltip />
+                          <Line type="monotone" dataKey="value" stroke="#22c55e" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Tabs defaultValue="spot" className="space-y-4">
                   <TabsList>
                     <TabsTrigger value="spot">Spot Account</TabsTrigger>
