@@ -13,18 +13,21 @@ import { useToast } from "@/hooks/use-toast";
 
 interface LeverageData {
   symbol: string;
-  leverage: number;
-  debt: number;
-  equity: number;
+  marginLevel: string;
+  marginRatio: string;
   baseAsset: {
     asset: string;
     borrowed: string;
     free: string;
+    interest: string;
+    netAsset: string;
   };
   quoteAsset: {
     asset: string;
     borrowed: string;
     free: string;
+    interest: string;
+    netAsset: string;
   };
 }
 
@@ -90,6 +93,11 @@ const Leverage = () => {
     refetchInterval: 30000,
   });
 
+  const formatValue = (value: string) => {
+    const numValue = parseFloat(value);
+    return isNaN(numValue) ? '0.00' : numValue.toFixed(8);
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -135,8 +143,8 @@ const Leverage = () => {
                         <TableRow>
                           <TableHead>Trading Pair</TableHead>
                           <TableHead className="text-right">Leverage</TableHead>
-                          <TableHead className="text-right">Debt</TableHead>
-                          <TableHead className="text-right">Equity</TableHead>
+                          <TableHead className="text-right">Free Base Asset</TableHead>
+                          <TableHead className="text-right">Free Quote Asset</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -144,13 +152,13 @@ const Leverage = () => {
                           <TableRow key={item.symbol}>
                             <TableCell className="font-medium">{item.symbol}</TableCell>
                             <TableCell className="text-right">
-                              {typeof item.leverage === 'number' ? `${item.leverage.toFixed(2)}x` : 'N/A'}
+                              {item.marginRatio}x
                             </TableCell>
                             <TableCell className="text-right">
-                              {typeof item.debt === 'number' ? item.debt.toFixed(8) : 'N/A'}
+                              {formatValue(item.baseAsset.free)} {item.baseAsset.asset}
                             </TableCell>
                             <TableCell className="text-right">
-                              {typeof item.equity === 'number' ? item.equity.toFixed(8) : 'N/A'}
+                              {formatValue(item.quoteAsset.free)} {item.quoteAsset.asset}
                             </TableCell>
                           </TableRow>
                         ))}
