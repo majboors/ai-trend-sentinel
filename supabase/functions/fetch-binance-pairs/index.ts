@@ -6,40 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-async function fetchSpotPairs() {
-  console.log('Fetching spot trading pairs...');
-  const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
-  const data = await response.json();
-  
-  const pairs = new Set();
-  data.symbols
-    .filter((s: any) => s.status === 'TRADING' && s.isSpotTradingAllowed)
-    .forEach((symbol: any) => {
-      pairs.add({
-        symbol: symbol.baseAsset,
-        baseAsset: symbol.baseAsset,
-        quoteAsset: symbol.quoteAsset,
-        profit: Math.random() > 0.5, // Temporary random profit for demo
-        priceChangePercent: (Math.random() * 10 - 5).toFixed(2), // Random price change
-        lastPrice: (Math.random() * 1000).toFixed(2), // Random price
-        volume: (Math.random() * 1000000).toFixed(2), // Random volume
-        quoteVolume: (Math.random() * 1000000).toFixed(2), // Random quote volume
-      });
-    });
-  
-  return Array.from(pairs);
-}
-
-async function fetch24hrTickers() {
-  console.log('Fetching 24hr tickers...');
-  const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
-  const tickers = await response.json();
-  return tickers.reduce((acc: any, ticker: any) => {
-    acc[ticker.symbol] = ticker;
-    return acc;
-  }, {});
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -71,18 +37,53 @@ serve(async (req) => {
       );
     }
 
-    console.log('Fetching all trading pairs for user:', user.id);
+    console.log('Fetching trading pairs for user:', user.id);
     
-    const [spotPairs, tickers] = await Promise.all([
-      fetchSpotPairs(),
-      fetch24hrTickers(),
-    ]);
+    // Fetch exchange information from Binance
+    const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch exchange info: ${response.statusText}`);
+    }
+    const data = await response.json();
+    
+    // Fetch 24hr ticker price change
+    const tickerResponse = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+    if (!tickerResponse.ok) {
+      throw new Error(`Failed to fetch ticker data: ${tickerResponse.statusText}`);
+    }
+    const tickerData = await tickerResponse.json();
 
-    console.log(`Total unique trading pairs found: ${spotPairs.length}`);
-    console.log('Sample of pairs:', spotPairs.slice(0, 5));
+    // Create a map of ticker data for quick lookup
+    const tickerMap = new Map(
+      tickerData.map((ticker: any) => [ticker.symbol, ticker])
+    );
+
+    // Process trading pairs
+    const tradingPairs = data.symbols
+      .filter((symbol: any) => 
+        symbol.status === 'TRADING' && 
+        symbol.isSpotTradingAllowed
+      )
+      .map((symbol: any) => {
+        const ticker = tickerMap.get(symbol.symbol);
+        return {
+          symbol: symbol.symbol,
+          baseAsset: symbol.baseAsset,
+          quoteAsset: symbol.quoteAsset,
+          priceChange: ticker ? parseFloat(ticker.priceChange) : 0,
+          priceChangePercent: ticker ? parseFloat(ticker.priceChangePercent) : 0,
+          lastPrice: ticker ? parseFloat(ticker.lastPrice) : 0,
+          volume: ticker ? parseFloat(ticker.volume) : 0,
+          quoteVolume: ticker ? parseFloat(ticker.quoteVolume) : 0,
+          profit: ticker ? parseFloat(ticker.priceChangePercent) > 0 : false
+        };
+      });
+
+    console.log(`Found ${tradingPairs.length} trading pairs`);
+    console.log('Sample pairs:', tradingPairs.slice(0, 5));
 
     return new Response(
-      JSON.stringify(spotPairs),
+      JSON.stringify(tradingPairs),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,

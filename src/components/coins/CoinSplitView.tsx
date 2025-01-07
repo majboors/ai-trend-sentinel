@@ -33,6 +33,7 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session');
 
+      console.log('Fetching trading pairs...');
       const response = await fetch('/functions/v1/fetch-binance-pairs', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -56,7 +57,7 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
     },
   });
 
-  const filteredCoins = coins.filter((coin: CoinData) => {
+  const filteredCoins = (coins as CoinData[]).filter((coin: CoinData) => {
     if (!filter) return true;
     return filter === "profit" ? coin.profit : !coin.profit;
   });
@@ -67,7 +68,7 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
   if (error) {
     return (
       <div className="text-center py-8 text-red-500">
-        <p>Error loading coins. Please try again later.</p>
+        <p>Error loading coins: {error.message}</p>
       </div>
     );
   }
@@ -81,7 +82,7 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
     >
       <div className="flex justify-between items-start mb-2">
         <div>
-          <h3 className="font-semibold">{coin.baseAsset}</h3>
+          <h3 className="font-semibold">{coin.baseAsset}/{coin.quoteAsset}</h3>
           <p className="text-sm text-muted-foreground">
             ${parseFloat(coin.lastPrice.toString()).toFixed(8)}
           </p>
