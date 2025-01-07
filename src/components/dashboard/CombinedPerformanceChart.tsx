@@ -43,9 +43,18 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
     );
     console.log('Sorted trades:', sortedTrades);
 
+    // Filter trades if filter function is provided
+    const filteredTrades = filter ? sortedTrades.filter(filter) : sortedTrades;
+    console.log('Filtered trades:', filteredTrades);
+
+    if (filteredTrades.length === 0) {
+      console.log('No trades after filtering');
+      return [];
+    }
+
     // Group trades by date and calculate cumulative value
     let cumulative = 0;
-    const groupedData = sortedTrades.reduce((acc: ChartData[], trade) => {
+    const groupedData = filteredTrades.reduce((acc: ChartData[], trade) => {
       if (!trade.created_at || trade.profit_loss === null || trade.profit_loss === undefined) {
         console.log('Invalid trade data:', trade);
         return acc;
@@ -78,17 +87,10 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
     const fetchData = async () => {
       try {
         console.log('Fetching trades data...');
-        let query = supabase
+        const { data: trades, error } = await supabase
           .from('prediction_trades')
           .select('*')
           .order('created_at', { ascending: true });
-
-        // Apply filter if provided
-        if (filter) {
-          query = query.filter('profit_loss', 'lt', 0);
-        }
-
-        const { data: trades, error } = await query;
 
         if (error) {
           console.error('Error fetching trades:', error);
@@ -103,10 +105,7 @@ export function CombinedPerformanceChart({ title, filter }: CombinedPerformanceC
           return;
         }
 
-        const filteredTrades = filter ? trades.filter(filter) : trades;
-        console.log('Filtered trades:', filteredTrades);
-
-        const chartData = processTradesData(filteredTrades);
+        const chartData = processTradesData(trades);
         console.log('Final chart data:', chartData);
         setData(chartData);
       } catch (error) {
