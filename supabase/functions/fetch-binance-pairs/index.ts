@@ -20,6 +20,7 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('No authorization header provided');
       throw new Error('No authorization header');
     }
 
@@ -29,6 +30,7 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
 
     if (userError || !user) {
+      console.error('Authentication error:', userError);
       return new Response(
         JSON.stringify({ error: 'Authentication required' }),
         {
@@ -41,18 +43,24 @@ serve(async (req) => {
     console.log('Fetching trading pairs for user:', user.id);
     
     // Fetch exchange information from Binance
+    console.log('Fetching exchange info...');
     const exchangeInfoResponse = await fetch('https://api.binance.com/api/v3/exchangeInfo');
     if (!exchangeInfoResponse.ok) {
+      console.error('Failed to fetch exchange info:', exchangeInfoResponse.statusText);
       throw new Error(`Failed to fetch exchange info: ${exchangeInfoResponse.statusText}`);
     }
     const exchangeInfo = await exchangeInfoResponse.json();
+    console.log('Exchange info fetched successfully');
     
     // Fetch 24hr ticker price changes
+    console.log('Fetching ticker data...');
     const tickerResponse = await fetch('https://api.binance.com/api/v3/ticker/24hr');
     if (!tickerResponse.ok) {
+      console.error('Failed to fetch ticker data:', tickerResponse.statusText);
       throw new Error(`Failed to fetch ticker data: ${tickerResponse.statusText}`);
     }
     const tickerData = await tickerResponse.json();
+    console.log('Ticker data fetched successfully');
 
     // Create a map of ticker data for quick lookup
     const tickerMap = new Map(
@@ -60,6 +68,7 @@ serve(async (req) => {
     );
 
     // Process and filter trading pairs
+    console.log('Processing trading pairs...');
     const tradingPairs = exchangeInfo.symbols
       .filter((symbol: any) => 
         symbol.status === 'TRADING' && 
@@ -67,7 +76,10 @@ serve(async (req) => {
       )
       .map((symbol: any) => {
         const ticker = tickerMap.get(symbol.symbol);
-        if (!ticker) return null;
+        if (!ticker) {
+          console.log(`No ticker data found for symbol: ${symbol.symbol}`);
+          return null;
+        }
 
         return {
           symbol: symbol.symbol,
@@ -84,6 +96,7 @@ serve(async (req) => {
       .filter(Boolean); // Remove null values
 
     console.log(`Found ${tradingPairs.length} active trading pairs`);
+    console.log('Sample trading pair:', tradingPairs[0]);
 
     return new Response(
       JSON.stringify(tradingPairs),

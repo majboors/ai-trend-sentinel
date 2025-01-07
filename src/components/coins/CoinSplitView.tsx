@@ -30,31 +30,52 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
   const { data: coins = [], isLoading, error } = useQuery({
     queryKey: ['coins'],
     queryFn: async () => {
+      console.log('Starting to fetch coins...');
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('No session');
+      if (!session) {
+        console.error('No session found');
+        throw new Error('No session');
+      }
+      console.log('Session found, user ID:', session.user.id);
 
-      console.log('Fetching trading pairs...');
+      console.log('Invoking fetch-binance-pairs function...');
       const response = await supabase.functions.invoke('fetch-binance-pairs', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
 
-      if (!response.error) {
-        console.log(`Successfully fetched ${response.data.length} trading pairs`);
-        return response.data;
-      } else {
+      if (response.error) {
         console.error('Error fetching trading pairs:', response.error);
         throw new Error(response.error.message || 'Failed to fetch coins');
       }
+
+      if (!response.data || !Array.isArray(response.data)) {
+        console.error('Invalid response data:', response.data);
+        throw new Error('Invalid response from server');
+      }
+
+      console.log(`Successfully fetched ${response.data.length} trading pairs`);
+      console.log('Sample coin data:', response.data[0]);
+      return response.data;
     },
     refetchInterval: 30000,
     meta: {
       onError: (error: Error) => {
+        console.error('Query error:', error);
         toast.error(`Error fetching coins: ${error.message}`);
       },
     },
   });
+
+  if (error) {
+    console.error('Render error:', error);
+    return (
+      <div className="text-center py-8 text-red-500">
+        <p>Error loading coins: {error.message}</p>
+      </div>
+    );
+  }
 
   const filteredCoins = (coins as CoinData[]).filter((coin: CoinData) => {
     if (!filter) return true;
@@ -63,14 +84,6 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
 
   const profitCoins = filteredCoins.filter((coin: CoinData) => coin.profit);
   const lossCoins = filteredCoins.filter((coin: CoinData) => !coin.profit);
-
-  if (error) {
-    return (
-      <div className="text-center py-8 text-red-500">
-        <p>Error loading coins: {error.message}</p>
-      </div>
-    );
-  }
 
   const CoinCard = ({ coin }: { coin: CoinData }) => (
     <Card
@@ -137,12 +150,15 @@ export function CoinSplitView({ filter }: CoinSplitViewProps) {
   }
 
   if (filteredCoins.length === 0) {
+    console.log('No coins found after filtering');
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground">No coins found matching the selected filter.</p>
       </div>
     );
   }
+
+  console.log(`Rendering ${profitCoins.length} profit coins and ${lossCoins.length} loss coins`);
 
   return (
     <div className="grid grid-cols-2 gap-4">
