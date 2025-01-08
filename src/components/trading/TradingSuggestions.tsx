@@ -26,7 +26,7 @@ const mockCoins = [
       neutral: 20,
       negative: 10,
     },
-    strategy: "buy",
+    strategy: "buy" as const, // Explicitly type as "buy"
   },
   // Add more mock coins as needed
 ];
@@ -89,7 +89,6 @@ export function TradingSuggestions() {
     if (!tradeViewId) return;
 
     try {
-      // Save current coin analysis
       await supabase
         .from('coin_indicators')
         .insert([
