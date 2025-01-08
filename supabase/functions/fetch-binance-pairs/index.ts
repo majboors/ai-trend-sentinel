@@ -101,6 +101,32 @@ serve(async (req) => {
           const avgPrice = (highPrice + lowPrice) / 2;
           const volatility = ((highPrice - lowPrice) / avgPrice) * 100;
 
+          // Generate mock klines data for testing
+          const klines = Array.from({ length: 100 }, (_, i) => {
+            const timestamp = Date.now() - (99 - i) * 60 * 60 * 1000;
+            const basePrice = parseFloat(ticker.lastPrice);
+            const trend = Math.sin(i / 10) * 0.02;
+            const noise = (Math.random() - 0.5) * 0.01;
+            const price = basePrice * (1 + trend + noise);
+            
+            return {
+              openTime: timestamp,
+              open: price.toString(),
+              high: (price * 1.002).toString(),
+              low: (price * 0.998).toString(),
+              close: price.toString(),
+              volume: (parseFloat(ticker.volume) * (Math.random() * 0.5 + 0.75)).toString()
+            };
+          });
+
+          // Generate mock recent trades data
+          const recentTrades = Array.from({ length: 20 }, () => ({
+            time: Date.now() - Math.floor(Math.random() * 3600000),
+            price: (parseFloat(ticker.lastPrice) * (1 + (Math.random() - 0.5) * 0.002)).toString(),
+            quantity: (Math.random() * 100).toString(),
+            isBuyerMaker: Math.random() > 0.5
+          }));
+
           return {
             symbol: symbol.symbol,
             baseAsset: symbol.baseAsset,
@@ -110,10 +136,17 @@ serve(async (req) => {
             lastPrice: parseFloat(ticker.lastPrice),
             volume: parseFloat(ticker.volume),
             quoteVolume: parseFloat(ticker.quoteVolume),
-            profit: parseFloat(ticker.priceChangePercent) > 0,
-            volatility: volatility,
-            highPrice: highPrice,
-            lowPrice: lowPrice
+            highPrice,
+            lowPrice,
+            volatility,
+            klines,
+            recentTrades,
+            indicators: {
+              rsi: 50 + (Math.random() - 0.5) * 20,
+              ma7: parseFloat(ticker.lastPrice) * (1 + (Math.random() - 0.5) * 0.01),
+              ma25: parseFloat(ticker.lastPrice) * (1 + (Math.random() - 0.5) * 0.02),
+              ma99: parseFloat(ticker.lastPrice) * (1 + (Math.random() - 0.5) * 0.03)
+            }
           };
         })
         .filter(Boolean)
