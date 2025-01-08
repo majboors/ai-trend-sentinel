@@ -23,13 +23,13 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
     const negative = sentimentData.find(s => s.type === "Negative")?.value || 0;
 
     if (neutral > 50) {
-      return "COIN IS DEAD";
+      return "COIN IS DEAD" as const;
     }
     if (positive > 20) {
-      return "buy";
+      return "buy" as const;
     }
     if (negative > 10) {
-      return "do not buy";
+      return "do not buy" as const;
     }
 
     return coin.strategy;
@@ -68,7 +68,6 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
           onSentimentChange={(sentimentData) => {
             const newStrategy = determineStrategy(sentimentData);
             if (newStrategy !== coin.strategy) {
-              // Update the coin strategy if needed
               coin.strategy = newStrategy;
             }
           }}
@@ -80,7 +79,7 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
         <p className={`text-lg font-bold ${
           coin.strategy === "buy" 
             ? "text-green-500" 
-            : coin.strategy === "sell" || coin.strategy === "do not buy"
+            : coin.strategy === "do not buy" || coin.strategy === "sell"
               ? "text-red-500" 
               : coin.strategy === "COIN IS DEAD"
                 ? "text-yellow-500"

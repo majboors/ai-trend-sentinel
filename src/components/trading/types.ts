@@ -23,7 +23,7 @@ export interface CoinData {
       ma99: number;
     };
   };
-  strategy: "buy" | "sell" | "hold";
+  strategy: "buy" | "sell" | "hold" | "COIN IS DEAD" | "do not buy";
   klines: Array<{
     openTime: number;
     open: string;
