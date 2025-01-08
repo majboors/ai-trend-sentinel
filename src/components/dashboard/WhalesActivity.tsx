@@ -26,12 +26,12 @@ export function WhalesActivity() {
         setLoading(true);
         console.log('Starting to fetch whale trades...');
 
-        // First try to get cached whale trades from Supabase
+        // First try to get cached whale trades from Supabase with a higher limit
         const { data: whaleData, error: dbError } = await supabase
           .from('whale_trades')
           .select('*')
           .order('timestamp', { ascending: false })
-          .limit(20);
+          .limit(50); // Increased limit to show more trades
 
         if (dbError) {
           console.error('Error fetching cached whale trades:', dbError);
@@ -87,11 +87,8 @@ export function WhalesActivity() {
           console.log('Received new whale trade:', payload);
           setWhales(current => {
             const newTrade = payload.new as WhaleTrade;
-            // Check if trade already exists to prevent duplicates
-            if (!current.some(trade => trade.id === newTrade.id)) {
-              return [newTrade, ...current.slice(0, 19)];
-            }
-            return current;
+            // Add new trade to the beginning of the array
+            return [newTrade, ...current].slice(0, 50); // Keep up to 50 most recent trades
           });
         }
       )
