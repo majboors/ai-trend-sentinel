@@ -8,9 +8,10 @@ interface SentimentOverviewCardProps {
   data: { [key: string]: SentimentData } | null;
   title: string;
   className?: string;
+  loading: boolean;
 }
 
-export function SentimentOverviewCard({ data, title, className }: SentimentOverviewCardProps) {
+export function SentimentOverviewCard({ data, title, className, loading }: SentimentOverviewCardProps) {
   const processData = () => {
     if (!data) return [];
     
@@ -45,7 +46,6 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
   };
 
   const chartData = processData();
-  console.log('Overall Market Sentiment Data:', chartData);
 
   return (
     <Card className={className}>
@@ -54,7 +54,7 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
       </CardHeader>
       <CardContent>
         <div className="h-[300px] relative">
-          {!data ? (
+          {loading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>

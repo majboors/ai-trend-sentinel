@@ -15,23 +15,27 @@ export function DashboardSection({ allCoinsData, loading }: DashboardSectionProp
         data={allCoinsData}
         title="Overall Market Sentiment"
         className="col-span-full md:col-span-2"
+        loading={loading}
       />
       <TopCoinsCard
         data={allCoinsData}
         title="Top Bullish Coins"
         type="buy"
         className="col-span-full md:col-span-2"
+        loading={loading}
       />
       <TopCoinsCard
         data={allCoinsData}
         title="Top Bearish Coins"
         type="sell"
         className="col-span-full md:col-span-2"
+        loading={loading}
       />
       <SentimentTrendCard
         data={allCoinsData}
         title="Market Sentiment Trends"
         className="col-span-full md:col-span-3"
+        loading={loading}
       />
     </div>
   );

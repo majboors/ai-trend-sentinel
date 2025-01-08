@@ -9,9 +9,10 @@ interface TopCoinsCardProps {
   title: string;
   type: "buy" | "sell" | "others";
   className?: string;
+  loading: boolean;
 }
 
-export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps) {
+export function TopCoinsCard({ data, title, type, className, loading }: TopCoinsCardProps) {
   const processData = () => {
     if (!data) return [];
     
@@ -69,7 +70,6 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
   };
 
   const chartData = processData();
-  console.log(`Top ${type} Coins Data:`, chartData);
 
   return (
     <Card className={className}>
@@ -78,7 +78,7 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
       </CardHeader>
       <CardContent>
         <div className="h-[300px] relative">
-          {!data ? (
+          {loading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>

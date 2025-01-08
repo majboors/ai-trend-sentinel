@@ -10,7 +10,7 @@ export function CoinSentimentView() {
   const [selectedCoin, setSelectedCoin] = useState<string>("");
   const [availableCoins, setAvailableCoins] = useState<string[]>([]);
   const [sentimentData, setSentimentData] = useState<SentimentData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadingCoins, setLoadingCoins] = useState(true);
   const { allCoinsData, loading: loadingAllCoins } = useAllCoinsSentiment();
   const { toast } = useToast();
@@ -80,10 +80,10 @@ export function CoinSentimentView() {
 
   return (
     <div className="space-y-6">
-      {/* Overview Dashboard */}
+      {/* Overview Dashboard - Always show with loading state if needed */}
       <DashboardSection allCoinsData={allCoinsData} loading={loadingAllCoins} />
 
-      {/* Individual Coin Analysis */}
+      {/* Individual Coin Analysis - Show immediately after coins are loaded */}
       <CoinAnalysisSection
         selectedCoin={selectedCoin}
         setSelectedCoin={setSelectedCoin}
