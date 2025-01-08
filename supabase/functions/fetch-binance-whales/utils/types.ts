@@ -1,7 +1,22 @@
 export interface MarginAsset {
   symbol: string;
-  baseAsset: string;
-  quoteAsset: string;
+  free: string;
+  locked: string;
+}
+
+export interface BinanceTrade {
+  symbol: string;
+  id: number;
+  orderId: number;
+  price: string;
+  qty: string;
+  quoteQty: string;
+  commission: string;
+  commissionAsset: string;
+  time: number;
+  isBuyer: boolean;
+  isMaker: boolean;
+  isBestMatch: boolean;
 }
 
 export interface WhaleTrade {
@@ -11,13 +26,4 @@ export interface WhaleTrade {
   price: number;
   trade_type: 'buy' | 'sell';
   timestamp: Date;
-}
-
-export interface BinanceTrade {
-  id: string;
-  symbol: string;
-  price: string;
-  qty: string;
-  time: number;
-  isBuyer: boolean;
 }

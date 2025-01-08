@@ -93,8 +93,12 @@ export async function fetchAllTradingPairs(apiKey: string): Promise<string[]> {
   }
 
   const data = await response.json();
+  // Get all trading pairs that are currently active
   const pairs = data.symbols
-    .filter((symbol: any) => symbol.status === 'TRADING')
+    .filter((symbol: any) => 
+      symbol.status === 'TRADING' && 
+      symbol.isSpotTradingAllowed
+    )
     .map((symbol: any) => symbol.symbol);
   
   console.log(`Found ${pairs.length} active trading pairs`);
@@ -141,7 +145,7 @@ export async function fetchTradesForSymbol(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`Error details: ${errorText}`);
+    console.error(`Error details for ${symbol}: ${errorText}`);
     throw new Error(`Failed to fetch ${accountType} trades for ${symbol}: ${response.statusText}`);
   }
 
