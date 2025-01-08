@@ -15,34 +15,44 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
   const processData = () => {
     if (!data) return [];
     
-    const coinSentiments: Record<string, number> = {};
+    const coinSentiments: Record<string, { count: number; total: number }> = {};
     
     try {
+      // First pass: count sentiments for each coin
       Object.entries(data).forEach(([coin, coinData]) => {
         if (coinData?.videos) {
           let sentimentCount = 0;
+          let totalComments = 0;
+          
           Object.values(coinData.videos).forEach(video => {
             if (video?.comments) {
               video.comments.forEach(comment => {
+                totalComments++;
                 if (comment.indicator === type) {
                   sentimentCount++;
                 }
               });
             }
           });
-          if (sentimentCount > 0) {
-            coinSentiments[coin] = sentimentCount;
+          
+          if (totalComments > 0) {
+            coinSentiments[coin] = {
+              count: sentimentCount,
+              total: totalComments
+            };
           }
         }
       });
 
+      // Convert to percentage and sort
       return Object.entries(coinSentiments)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 10)
-        .map(([coin, count]) => ({
+        .map(([coin, { count, total }]) => ({
           coin: coin.length > 20 ? coin.substring(0, 20) + "..." : coin,
-          count,
-        }));
+          percentage: (count / total) * 100,
+          count
+        }))
+        .sort((a, b) => b.percentage - a.percentage)
+        .slice(0, 10);
     } catch (error) {
       console.error('Error processing coin sentiments:', error);
       return [];
@@ -52,11 +62,11 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
   const getBarColor = () => {
     switch (type) {
       case "buy":
-        return "hsl(142.1 76.2% 36.3%)";
+        return "hsl(142.1 76.2% 36.3%)"; // Green
       case "sell":
-        return "hsl(346.8 77.2% 49.8%)";
+        return "hsl(346.8 77.2% 49.8%)"; // Red
       default:
-        return "hsl(47.9 95.8% 53.1%)";
+        return "hsl(47.9 95.8% 53.1%)"; // Yellow
     }
   };
 
@@ -74,6 +84,7 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
   }
 
   const chartData = processData();
+  console.log(`Top ${type} Coins Data:`, chartData);
 
   return (
     <Card className={className}>
@@ -88,9 +99,11 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
                 <YAxis dataKey="coin" type="category" width={150} />
-                <Tooltip />
+                <Tooltip 
+                  formatter={(value: number) => [`${value.toFixed(2)}%`, 'Percentage']}
+                />
                 <Bar 
-                  dataKey="count" 
+                  dataKey="percentage"
                   fill={getBarColor()}
                   radius={[0, 4, 4, 0]}
                 />

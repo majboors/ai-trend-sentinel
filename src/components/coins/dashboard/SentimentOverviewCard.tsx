@@ -15,6 +15,7 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
     if (!data) return [];
     
     const sentiments = { buy: 0, sell: 0, others: 0 };
+    let totalComments = 0;
     
     try {
       Object.entries(data).forEach(([_, coinData]) => {
@@ -22,6 +23,7 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
           Object.values(coinData.videos).forEach(video => {
             if (video?.comments) {
               video.comments.forEach(comment => {
+                totalComments++;
                 if (comment.indicator === 'buy') sentiments.buy++;
                 else if (comment.indicator === 'sell') sentiments.sell++;
                 else sentiments.others++;
@@ -31,8 +33,10 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
         }
       });
 
+      // Convert to percentages
       return Object.entries(sentiments).map(([key, value]) => ({
         sentiment: key.charAt(0).toUpperCase() + key.slice(1),
+        percentage: totalComments > 0 ? (value / totalComments) * 100 : 0,
         count: value,
       }));
     } catch (error) {
@@ -40,8 +44,6 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
       return [];
     }
   };
-
-  const chartData = processData();
 
   if (!data) {
     return (
@@ -56,6 +58,9 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
     );
   }
 
+  const chartData = processData();
+  console.log('Overall Market Sentiment Data:', chartData);
+
   return (
     <Card className={className}>
       <CardHeader>
@@ -69,9 +74,11 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="sentiment" />
                 <YAxis />
-                <Tooltip />
+                <Tooltip 
+                  formatter={(value: number) => [`${value.toFixed(2)}%`, 'Percentage']}
+                />
                 <Bar 
-                  dataKey="count" 
+                  dataKey="percentage"
                   fill="hsl(var(--primary))"
                   radius={[4, 4, 0, 0]}
                 />
