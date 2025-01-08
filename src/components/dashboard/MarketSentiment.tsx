@@ -32,7 +32,6 @@ export function MarketSentiment() {
         }
         const data = await response.json();
         if (data.coins && Array.isArray(data.coins)) {
-          // Filter out any invalid coin symbols
           const validCoins = data.coins.filter(coin => 
             typeof coin === 'string' && coin.length > 0 && !coin.includes(' ')
           );
@@ -48,10 +47,53 @@ export function MarketSentiment() {
     fetchCoins();
   }, []);
 
+  // Calculate sentiment percentages from video data
+  const calculateSentimentPercentages = (videos: any) => {
+    let buyCount = 0;
+    let sellCount = 0;
+    let othersCount = 0;
+    let totalCount = 0;
+
+    // Count sentiments from comments
+    Object.values(videos).forEach((video: any) => {
+      if (video.comments && Array.isArray(video.comments)) {
+        video.comments.forEach((comment: any) => {
+          if (comment.indicator === 'buy') buyCount++;
+          else if (comment.indicator === 'sell') sellCount++;
+          else if (comment.indicator === 'others') othersCount++;
+          totalCount++;
+        });
+      }
+
+      // Add title sentiment if available
+      if (video.title_label === 'buy') {
+        buyCount++;
+        totalCount++;
+      } else if (video.title_label === 'sell') {
+        sellCount++;
+        totalCount++;
+      } else if (video.title_label === 'others') {
+        othersCount++;
+        totalCount++;
+      }
+    });
+
+    // Calculate percentages
+    const total = totalCount || 1; // Prevent division by zero
+    return [
+      { type: "Positive", value: Math.round((buyCount / total) * 100), color: "bg-green-500" },
+      { type: "Neutral", value: Math.round((othersCount / total) * 100), color: "bg-yellow-500" },
+      { type: "Negative", value: Math.round((sellCount / total) * 100), color: "bg-red-500" },
+    ];
+  };
+
   // Fetch sentiment data when coin is selected
   useEffect(() => {
     const fetchSentimentData = async () => {
-      if (!selectedCoin || selectedCoin === "market") return;
+      if (!selectedCoin || selectedCoin === "market") {
+        setSentimentData(defaultSentimentData);
+        return;
+      }
       
       try {
         setLoading(true);
@@ -61,29 +103,21 @@ export function MarketSentiment() {
         }
         const data = await response.json();
         
-        // Transform API data to match our format
-        const newSentimentData: SentimentData[] = [
-          { type: "Positive", value: data.positive || 0, color: "bg-green-500" },
-          { type: "Neutral", value: data.neutral || 0, color: "bg-yellow-500" },
-          { type: "Negative", value: data.negative || 0, color: "bg-red-500" },
-        ];
-        
-        setSentimentData(newSentimentData);
+        if (data.videos) {
+          const newSentimentData = calculateSentimentPercentages(data.videos);
+          setSentimentData(newSentimentData);
+        } else {
+          setSentimentData(defaultSentimentData);
+        }
       } catch (error) {
         console.error('Error fetching sentiment data:', error);
-        // Reset to default data on error
         setSentimentData(defaultSentimentData);
       } finally {
         setLoading(false);
       }
     };
 
-    if (selectedCoin === "market") {
-      setSentimentData(defaultSentimentData);
-      setLoading(false);
-    } else if (selectedCoin) {
-      fetchSentimentData();
-    }
+    fetchSentimentData();
   }, [selectedCoin]);
 
   return (
