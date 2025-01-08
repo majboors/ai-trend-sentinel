@@ -71,7 +71,7 @@ export function useCoinData() {
           body: {
             includeKlines: true,
             interval: '1h',
-            limit: '100' // Fixed: Convert number to string
+            limit: '100' // Fixed: Explicitly passing as string
           }
         });
 
