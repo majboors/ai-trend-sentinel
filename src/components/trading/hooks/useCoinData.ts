@@ -55,6 +55,13 @@ function generateAnalysis(coin: CoinData): string {
   return analysis;
 }
 
+function determineSentiment(rsi: number): string {
+  if (rsi > 70) return "overbought";
+  if (rsi < 30) return "oversold";
+  if (rsi > 50) return "bullish";
+  return "bearish";
+}
+
 export function useCoinData() {
   return useQuery({
     queryKey: ['trading-coins'],
@@ -71,7 +78,7 @@ export function useCoinData() {
           body: {
             includeKlines: true,
             interval: '1h',
-            limit: '100'  // Changed from number to string
+            limit: '100'  // Fixed: Now passing as string
           }
         });
 
@@ -97,6 +104,9 @@ export function useCoinData() {
           const ma7 = calculateMA(prices, 7);
           const ma25 = calculateMA(prices, 25);
           const ma99 = calculateMA(prices, 99);
+
+          // Ensure we have a valid sentiment value
+          const sentiment = determineSentiment(rsi);
 
           return {
             ...coinData,
