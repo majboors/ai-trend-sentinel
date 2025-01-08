@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { TradeNameDialog } from "./TradeNameDialog";
 import { CoinAnalysisCard } from "./CoinAnalysisCard";
 import { CoinVolatileView } from "@/components/coins/CoinVolatileView";
+import { useCoinData } from "./hooks/useCoinData";
+import type { TradeViewState } from "./types";
 import {
   Select,
   SelectContent,
@@ -15,32 +17,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const mockCoins = [
-  {
-    id: "bitcoin",
-    name: "Bitcoin",
-    symbol: "BTC",
-    currentPrice: 43000,
-    sentiment: {
-      positive: 70,
-      neutral: 20,
-      negative: 10,
-    },
-    strategy: "buy" as const, // Explicitly type as "buy"
-  },
-  // Add more mock coins as needed
-];
-
 export function TradingSuggestions() {
   const [started, setStarted] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [isTradeNameDialogOpen, setIsTradeNameDialogOpen] = useState(false);
   const [viewType, setViewType] = useState<string>("suggestions");
-  const [tradeViewId, setTradeViewId] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  const [tradeView, setTradeView] = useState<TradeViewState>({
+    id: null,
+    currentIndex: 0,
+    coins: [],
+  });
 
-  const progress = (currentIndex / mockCoins.length) * 100;
-  const currentCoin = mockCoins[currentIndex];
+  const { data: coins = [], isLoading, error } = useCoinData();
+
+  const progress = (tradeView.currentIndex / (coins.length || 1)) * 100;
+  const currentCoin = coins[tradeView.currentIndex];
 
   const handleStart = () => {
     setIsTradeNameDialogOpen(true);
@@ -68,9 +60,15 @@ export function TradingSuggestions() {
 
       if (error) throw error;
 
-      setTradeViewId(tradeView.id);
+      setTradeView({
+        id: tradeView.id,
+        currentIndex: 0,
+        coins: coins,
+      });
+      
       setStarted(true);
       setIsTradeNameDialogOpen(false);
+      
       toast({
         title: "Analysis Started",
         description: "Analyzing coins for trading suggestions...",
@@ -86,22 +84,25 @@ export function TradingSuggestions() {
   };
 
   const handleNext = async () => {
-    if (!tradeViewId) return;
+    if (!tradeView.id || !currentCoin) return;
 
     try {
       await supabase
         .from('coin_indicators')
         .insert([
           {
-            trade_view_id: tradeViewId,
+            trade_view_id: tradeView.id,
             coin_symbol: currentCoin.symbol,
             sentiment: currentCoin.strategy,
-            indicators: currentCoin.sentiment,
+            indicators: currentCoin.indicators,
           }
         ]);
 
-      if (currentIndex < mockCoins.length - 1) {
-        setCurrentIndex(prev => prev + 1);
+      if (tradeView.currentIndex < coins.length - 1) {
+        setTradeView(prev => ({
+          ...prev,
+          currentIndex: prev.currentIndex + 1,
+        }));
       } else {
         toast({
           title: "Analysis Complete",
@@ -119,25 +120,26 @@ export function TradingSuggestions() {
   };
 
   const handleBuy = async () => {
-    if (!tradeViewId) return;
+    if (!tradeView.id || !currentCoin) return;
 
     try {
       await supabase
         .from('coin_indicators')
         .insert([
           {
-            trade_view_id: tradeViewId,
+            trade_view_id: tradeView.id,
             coin_symbol: currentCoin.symbol,
             sentiment: currentCoin.strategy,
-            indicators: currentCoin.sentiment,
+            indicators: currentCoin.indicators,
             user_response: 'buy'
           }
         ]);
 
       toast({
         title: "Trade Recorded",
-        description: `Recorded buy decision for ${currentCoin.name}`,
+        description: `Recorded buy decision for ${currentCoin.symbol}`,
       });
+      
       handleNext();
     } catch (error) {
       console.error('Error recording trade:', error);
@@ -165,6 +167,14 @@ export function TradingSuggestions() {
     );
   }
 
+  if (isLoading) {
+    return <div>Loading coins...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+
   return (
     <div className="p-4 space-y-4">
       <div className="w-[200px]">
@@ -185,7 +195,7 @@ export function TradingSuggestions() {
         <>
           <Progress value={progress} className="w-full" />
           <p className="text-sm text-muted-foreground">
-            Analyzing coin {currentIndex + 1} of {mockCoins.length}
+            Analyzing coin {tradeView.currentIndex + 1} of {coins.length}
           </p>
 
           {currentCoin && (

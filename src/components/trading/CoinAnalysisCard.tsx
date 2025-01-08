@@ -2,21 +2,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { MarketSentiment } from "@/components/dashboard/MarketSentiment";
-import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
+import { CoinChart } from "./CoinChart";
+import type { CoinData } from "./types";
 
 interface CoinAnalysisCardProps {
-  coin: {
-    id: string;
-    name: string;
-    symbol: string;
-    currentPrice: number;
-    sentiment: {
-      positive: number;
-      neutral: number;
-      negative: number;
-    };
-    strategy: "buy" | "hold" | "sell";
-  };
+  coin: CoinData;
   onNext: () => void;
   onBuy: () => void;
 }
@@ -26,19 +16,20 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
     <Card className="p-6 space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-bold">{coin.name}</h2>
+          <h2 className="text-2xl font-bold">{coin.baseAsset}/{coin.quoteAsset}</h2>
           <p className="text-muted-foreground">{coin.symbol}</p>
         </div>
         <div className="text-right">
           <p className="text-lg font-semibold">
-            ${coin.currentPrice.toLocaleString()}
+            ${parseFloat(coin.lastPrice.toString()).toLocaleString()}
+          </p>
+          <p className={`text-sm ${coin.priceChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            {coin.priceChangePercent.toFixed(2)}%
           </p>
         </div>
       </div>
 
-      <div className="h-[300px]">
-        <PerformanceChart />
-      </div>
+      <CoinChart coin={coin} />
 
       <MarketSentiment />
 
