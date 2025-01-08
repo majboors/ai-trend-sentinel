@@ -28,8 +28,12 @@ export function CoinSentimentView() {
           throw new Error('Failed to fetch coins');
         }
         const data = await response.json();
-        if (isMounted && data.coins) {
+        if (isMounted && Array.isArray(data.coins)) {
           setAvailableCoins(data.coins);
+          // If no coin is selected and we have coins, select the first one
+          if (!selectedCoin && data.coins.length > 0) {
+            setSelectedCoin(data.coins[0]);
+          }
         }
       } catch (error) {
         console.error('Error fetching coins:', error);
@@ -50,7 +54,7 @@ export function CoinSentimentView() {
     return () => {
       isMounted = false;
     };
-  }, [toast]);
+  }, [toast, selectedCoin]);
 
   // Fetch sentiment data separately with retry logic
   useEffect(() => {
@@ -58,11 +62,14 @@ export function CoinSentimentView() {
     
     let retryCount = 0;
     let isMounted = true;
+    let controller = new AbortController();
     
     const fetchSentimentData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`https://crypto.techrealm.pk/coin/${selectedCoin}`);
+        const response = await fetch(`https://crypto.techrealm.pk/coin/${selectedCoin}`, {
+          signal: controller.signal
+        });
         if (!response.ok) {
           throw new Error('Failed to fetch sentiment data');
         }
@@ -71,6 +78,10 @@ export function CoinSentimentView() {
           setSentimentData(data);
         }
       } catch (error) {
+        if (error.name === 'AbortError') {
+          console.log('Fetch aborted');
+          return;
+        }
         console.error('Error fetching sentiment data:', error);
         if (retryCount < MAX_RETRIES && isMounted) {
           retryCount++;
@@ -93,6 +104,7 @@ export function CoinSentimentView() {
     fetchSentimentData();
     return () => {
       isMounted = false;
+      controller.abort();
     };
   }, [selectedCoin, toast]);
 
