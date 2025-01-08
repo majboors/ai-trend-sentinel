@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { TradeNameDialog } from "./TradeNameDialog";
-import { CoinAnalysisCard } from "./CoinAnalysisCard";
 import { CoinVolatileView } from "@/components/coins/CoinVolatileView";
 import { StartAnalysisButton } from "./StartAnalysisButton";
 import { AnalysisHeader } from "./analysis/AnalysisHeader";
+import { AnalysisView } from "./analysis/AnalysisView";
 import { useCoinData } from "./hooks/useCoinData";
 import type { TradeViewState } from "./types";
 
@@ -13,6 +13,7 @@ export function TradingSuggestions() {
   const [started, setStarted] = useState(false);
   const [isTradeNameDialogOpen, setIsTradeNameDialogOpen] = useState(false);
   const [viewType, setViewType] = useState<string>("suggestions");
+  const [showLiveAnalysis, setShowLiveAnalysis] = useState(false);
   const { toast } = useToast();
   
   const [tradeView, setTradeView] = useState<TradeViewState>({
@@ -159,6 +160,14 @@ export function TradingSuggestions() {
     }
   };
 
+  const handleLiveAnalyze = () => {
+    setShowLiveAnalysis(true);
+    toast({
+      title: "Live Analysis Started",
+      description: "Real-time market data analysis has begun.",
+    });
+  };
+
   if (!started) {
     return (
       <div className="glass-card p-8">
@@ -201,10 +210,12 @@ export function TradingSuggestions() {
         <CoinVolatileView />
       ) : (
         currentCoin && (
-          <CoinAnalysisCard
+          <AnalysisView
             coin={currentCoin}
+            showLiveAnalysis={showLiveAnalysis}
             onNext={handleNext}
             onBuy={handleBuy}
+            onLiveAnalyze={handleLiveAnalyze}
           />
         )
       )}
