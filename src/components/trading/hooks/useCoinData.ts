@@ -114,9 +114,9 @@ export function useCoinData() {
             priceChange: coinData.priceChangePercent,
             analysis: generateAnalysis(coinData),
             sentiment: {
-              neutral: Math.abs(50 - rsi),
-              positive: rsi > 70 ? 100 : rsi > 50 ? 75 : 25,
-              negative: rsi < 30 ? 100 : rsi < 50 ? 75 : 25,
+              neutral: Math.abs(50 - rsi).toString(),  // Fixed: Convert to string
+              positive: (rsi > 70 ? 100 : rsi > 50 ? 75 : 25).toString(),  // Fixed: Convert to string
+              negative: (rsi < 30 ? 100 : rsi < 50 ? 75 : 25).toString()  // Fixed: Convert to string
             },
             indicators: {
               rsi,
