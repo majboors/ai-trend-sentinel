@@ -28,11 +28,15 @@ export function CoinSentimentView() {
           throw new Error('Failed to fetch coins');
         }
         const data = await response.json();
-        if (isMounted && Array.isArray(data.coins)) {
-          setAvailableCoins(data.coins);
+        
+        // Filter out any invalid coins and ensure we have an array
+        const validCoins = Array.isArray(data.coins) ? data.coins.filter(Boolean) : [];
+        
+        if (isMounted) {
+          setAvailableCoins(validCoins);
           // If no coin is selected and we have coins, select the first one
-          if (!selectedCoin && data.coins.length > 0) {
-            setSelectedCoin(data.coins[0]);
+          if (!selectedCoin && validCoins.length > 0) {
+            setSelectedCoin(validCoins[0]);
           }
         }
       } catch (error) {
@@ -70,12 +74,23 @@ export function CoinSentimentView() {
         const response = await fetch(`https://crypto.techrealm.pk/coin/${selectedCoin}`, {
           signal: controller.signal
         });
+        
         if (!response.ok) {
-          throw new Error('Failed to fetch sentiment data');
+          // If this coin fails, try the next one in the list
+          const currentIndex = availableCoins.indexOf(selectedCoin);
+          if (currentIndex < availableCoins.length - 1) {
+            setSelectedCoin(availableCoins[currentIndex + 1]);
+          }
+          throw new Error(`Failed to fetch sentiment data for ${selectedCoin}`);
         }
+        
         const data = await response.json();
         if (isMounted) {
-          setSentimentData(data);
+          // Update sentiment data incrementally as we receive it
+          setSentimentData(prevData => ({
+            ...prevData,
+            ...data
+          }));
         }
       } catch (error) {
         if (error.name === 'AbortError') {
@@ -89,10 +104,16 @@ export function CoinSentimentView() {
         } else if (isMounted) {
           toast({
             title: "Warning",
-            description: "Could not load sentiment data. Please try again later.",
+            description: `Could not load sentiment data for ${selectedCoin}. Trying next coin.`,
             variant: "destructive",
           });
           setSentimentData(null);
+          
+          // Try the next coin if available
+          const currentIndex = availableCoins.indexOf(selectedCoin);
+          if (currentIndex < availableCoins.length - 1) {
+            setSelectedCoin(availableCoins[currentIndex + 1]);
+          }
         }
       } finally {
         if (isMounted) {
@@ -106,7 +127,7 @@ export function CoinSentimentView() {
       isMounted = false;
       controller.abort();
     };
-  }, [selectedCoin, toast]);
+  }, [selectedCoin, toast, availableCoins]);
 
   return (
     <div className="space-y-6">
