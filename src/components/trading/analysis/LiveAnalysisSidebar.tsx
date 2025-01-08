@@ -16,8 +16,8 @@ interface LiveAnalysisSidebarProps {
 
 export function LiveAnalysisSidebar({ onClose }: LiveAnalysisSidebarProps) {
   return (
-    <Sidebar side="right" variant="floating">
-      <SidebarHeader className="p-4 flex justify-between items-center">
+    <Sidebar side="right" variant="floating" className="border-l border-border">
+      <SidebarHeader className="p-4 flex justify-between items-center border-b border-border">
         <h3 className="text-lg font-semibold">Live Analysis</h3>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-4 w-4" />
