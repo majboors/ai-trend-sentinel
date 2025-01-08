@@ -91,7 +91,7 @@ export default function ProfitPredictions() {
             exitPrice: currentPrice,
             amount: coinsAmount,
             profitLoss: potentialProfit,
-            type: potentialProfit > 0 ? 'profit' : 'loss' // Changed back to profit/loss type
+            type: potentialProfit > 0 ? 'buy' : 'sell' // Changed to use 'buy'/'sell' instead of 'profit'/'loss'
           });
         }
 
