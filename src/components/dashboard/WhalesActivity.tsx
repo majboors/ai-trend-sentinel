@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, Loader2Icon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
@@ -23,6 +23,9 @@ export function WhalesActivity() {
   useEffect(() => {
     const fetchWhales = async () => {
       try {
+        setLoading(true);
+        console.log('Starting to fetch whale trades...');
+
         // First try to get cached whale trades from Supabase
         const { data: whaleData, error: dbError } = await supabase
           .from('whale_trades')
@@ -30,26 +33,39 @@ export function WhalesActivity() {
           .order('timestamp', { ascending: false })
           .limit(10);
 
-        if (dbError) throw dbError;
+        if (dbError) {
+          console.error('Error fetching cached whale trades:', dbError);
+          throw dbError;
+        }
 
         if (whaleData) {
+          console.log('Found cached whale trades:', whaleData.length);
           setWhales(whaleData as WhaleTrade[]);
         }
 
         // Then fetch fresh data from Binance
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error('No authenticated session');
+        if (!session) {
+          console.error('No authenticated session found');
+          throw new Error('No authenticated session');
+        }
 
+        console.log('Invoking fetch-binance-whales function...');
         const response = await supabase.functions.invoke('fetch-binance-whales', {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
           },
         });
 
-        if (response.error) throw response.error;
+        if (response.error) {
+          console.error('Error from fetch-binance-whales:', response.error);
+          throw response.error;
+        }
+
+        console.log('Successfully fetched fresh whale trades');
 
       } catch (err) {
-        console.error('Error fetching whale trades:', err);
+        console.error('Error in fetchWhales:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch whale trades');
       } finally {
         setLoading(false);
@@ -68,6 +84,7 @@ export function WhalesActivity() {
           table: 'whale_trades' 
         }, 
         payload => {
+          console.log('Received new whale trade:', payload);
           setWhales(current => [payload.new as WhaleTrade, ...current.slice(0, 9)]);
         }
       )
@@ -81,7 +98,10 @@ export function WhalesActivity() {
   if (loading) {
     return (
       <Card className="glass-card p-6">
-        <h3 className="text-sm font-medium text-muted-foreground mb-4">Loading whale activity...</h3>
+        <div className="flex items-center justify-center space-x-2">
+          <Loader2Icon className="h-5 w-5 animate-spin" />
+          <h3 className="text-sm font-medium text-muted-foreground">Loading whale activity...</h3>
+        </div>
       </Card>
     );
   }
@@ -90,6 +110,14 @@ export function WhalesActivity() {
     return (
       <Card className="glass-card p-6">
         <h3 className="text-sm font-medium text-destructive mb-4">Error: {error}</h3>
+      </Card>
+    );
+  }
+
+  if (!whales || whales.length === 0) {
+    return (
+      <Card className="glass-card p-6">
+        <h3 className="text-sm font-medium text-muted-foreground mb-4">No whale activity found</h3>
       </Card>
     );
   }
