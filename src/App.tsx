@@ -14,6 +14,7 @@ import TradingVolatile from "@/pages/TradingVolatile";
 import Assets from "@/pages/Assets";
 import SpentProfits from "@/pages/SpentProfits";
 import Leverage from "@/pages/Leverage";
+import CoinSentiment from "@/pages/CoinSentiment";
 import "./App.css";
 
 // Create a client
@@ -34,6 +35,7 @@ function App() {
           <Route path="/" element={<Index />} />
           <Route path="/coins" element={<AllCoins />} />
           <Route path="/coins/:symbol" element={<SingleCoin />} />
+          <Route path="/coins/sentiment" element={<CoinSentiment />} />
           <Route path="/predictions" element={<PredictionsOverview />} />
           <Route path="/predictions/profits" element={<ProfitPredictions />} />
           <Route path="/predictions/losses" element={<LossPredictions />} />

@@ -24,6 +24,7 @@ import {
   ArrowLeftRight,
   Wallet,
   TrendingUp,
+  MessageSquare,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -36,6 +37,7 @@ const menuItems = [
     items: [
       { title: "Profit", icon: BarChart3, url: "/coins?filter=profit" },
       { title: "Loss", icon: DollarSign, url: "/coins?filter=loss" },
+      { title: "Sentiment", icon: MessageSquare, url: "/coins/sentiment" },
     ],
   },
   {
