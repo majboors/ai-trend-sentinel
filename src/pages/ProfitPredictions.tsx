@@ -91,7 +91,7 @@ export default function ProfitPredictions() {
             exitPrice: currentPrice,
             amount: coinsAmount,
             profitLoss: potentialProfit,
-            type: potentialProfit > 0 ? 'profit' : 'loss'
+            type: 'buy' // Changed from 'BUY' to 'buy' to match database constraint
           });
         }
 
@@ -142,8 +142,7 @@ export default function ProfitPredictions() {
           amount,
           profit_loss: profitLoss,
           type,
-          status: 'open', // Changed to lowercase 'open' to match the database constraint
-          closed_at: null // Don't set closed_at for open trades
+          status: 'open'
         });
 
       if (error) {
