@@ -12,9 +12,18 @@ serve(async (req) => {
   }
 
   try {
+    // Verify environment variables are set
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("Missing Supabase environment variables");
+      throw new Error("Missing required environment variables");
+    }
+
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      supabaseUrl,
+      supabaseAnonKey,
       {
         global: {
           headers: { Authorization: req.headers.get("Authorization")! },
@@ -24,8 +33,11 @@ serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
+      console.error("Authentication error:", userError);
       throw new Error("User not authenticated");
     }
+
+    console.log("Fetching API keys for user:", user.id);
 
     // Get user's API keys
     const { data: apiKeys, error: apiKeysError } = await supabaseClient
@@ -35,8 +47,11 @@ serve(async (req) => {
       .single();
 
     if (apiKeysError || !apiKeys) {
+      console.error("API keys error:", apiKeysError);
       throw new Error("No API keys found");
     }
+
+    console.log("Successfully retrieved API keys");
 
     // First fetch isolated margin account details
     const timestamp = Date.now();
