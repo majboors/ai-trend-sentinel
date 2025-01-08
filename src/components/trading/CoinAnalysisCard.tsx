@@ -23,7 +23,8 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
 
     console.log("Sentiment values:", { neutral, positive, negative });
 
-    // First priority: Check neutral sentiment
+    // Highest priority: Check neutral sentiment
+    // If neutral > 50%, coin is dead regardless of other values
     if (neutral > 50) {
       return "COIN IS DEAD";
     }
