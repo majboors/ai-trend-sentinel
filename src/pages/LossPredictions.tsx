@@ -60,7 +60,7 @@ export default function LossPredictions() {
     }
   };
 
-  if (!view) return null;
+  if (!view || !viewId) return null;
 
   const totalLoss = trades.reduce((sum, trade) => sum + Number(trade.profit_loss || 0), 0);
   const lossPercentage = (totalLoss / Number(view.initial_amount)) * 100;
@@ -107,6 +107,7 @@ export default function LossPredictions() {
 
               <CombinedPerformanceChart 
                 title="Loss Performance" 
+                viewId={viewId}
                 filter={(trade) => Number(trade.profit_loss) < 0}
               />
             </div>

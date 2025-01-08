@@ -104,7 +104,7 @@ export default function ProfitPredictions() {
     }
   }, [viewId, navigate, viewData]);
 
-  if (!view) return null;
+  if (!view || !viewId) return null;
 
   const totalProfit = coinProfits.reduce((sum, coin) => sum + coin.potentialProfit, 0);
   const averageProfitPercentage = coinProfits.reduce((sum, coin) => sum + coin.profitPercentage, 0) / coinProfits.length;
@@ -151,6 +151,7 @@ export default function ProfitPredictions() {
 
               <CombinedPerformanceChart 
                 title="Profit Performance" 
+                viewId={viewId}
                 filter={(trade) => Number(trade.profit_loss) > 0}
               />
 
