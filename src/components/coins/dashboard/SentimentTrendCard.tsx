@@ -6,9 +6,10 @@ import type { SentimentData } from "../types";
 interface SentimentTrendCardProps {
   data: SentimentData | null;
   title: string;
+  className?: string;
 }
 
-export function SentimentTrendCard({ data, title }: SentimentTrendCardProps) {
+export function SentimentTrendCard({ data, title, className }: SentimentTrendCardProps) {
   const processData = () => {
     if (!data) return [];
     
@@ -30,7 +31,7 @@ export function SentimentTrendCard({ data, title }: SentimentTrendCardProps) {
   };
 
   return (
-    <Card className="col-span-3">
+    <Card className={className}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>

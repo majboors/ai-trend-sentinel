@@ -6,9 +6,10 @@ import type { SentimentData } from "../types";
 interface SentimentOverviewCardProps {
   data: SentimentData | null;
   title: string;
+  className?: string;
 }
 
-export function SentimentOverviewCard({ data, title }: SentimentOverviewCardProps) {
+export function SentimentOverviewCard({ data, title, className }: SentimentOverviewCardProps) {
   const processData = () => {
     if (!data) return [];
     
@@ -26,7 +27,7 @@ export function SentimentOverviewCard({ data, title }: SentimentOverviewCardProp
   };
 
   return (
-    <Card className="col-span-2">
+    <Card className={className}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>

@@ -110,13 +110,39 @@ export function CoinSentimentView() {
 
   return (
     <div className="space-y-6">
+      {/* Overview Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8">
+        <SentimentOverviewCard
+          data={sentimentData}
+          title="Overall Market Sentiment"
+          className="col-span-full md:col-span-2"
+        />
+        <TopCoinsCard
+          data={sentimentData}
+          title="Top Bullish Coins"
+          type="buy"
+          className="col-span-full md:col-span-2"
+        />
+        <TopCoinsCard
+          data={sentimentData}
+          title="Top Bearish Coins"
+          type="sell"
+          className="col-span-full md:col-span-2"
+        />
+        <SentimentTrendCard
+          data={sentimentData}
+          title="Market Sentiment Trends"
+          className="col-span-full md:col-span-3"
+        />
+      </div>
+
       <div className="glass-card p-6">
         <div className="mb-6">
           <label htmlFor="coin-select" className="block text-sm font-medium mb-2">
-            Select Coin
+            Select Coin for Detailed Analysis
           </label>
           <Select value={selectedCoin} onValueChange={setSelectedCoin}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full md:w-1/3">
               <SelectValue placeholder="Select a coin" />
             </SelectTrigger>
             <SelectContent>
@@ -135,7 +161,7 @@ export function CoinSentimentView() {
             defaultValue="all"
             value={sentimentFilter}
             onValueChange={(value) => setSentimentFilter(value as SentimentFilter)}
-            className="flex space-x-4 mt-2"
+            className="flex flex-wrap gap-4 mt-2"
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="all" id="all" />
@@ -159,37 +185,17 @@ export function CoinSentimentView() {
         <SentimentStats loading={loading} stats={calculateSentiments()} />
       </div>
 
-      {/* Dashboard Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        <SentimentOverviewCard
-          data={sentimentData}
-          title="Overall Sentiment Distribution"
-        />
-        <TopCoinsCard
-          data={sentimentData}
-          title="Top Positive Sentiment Coins"
-          type="buy"
-        />
-        <TopCoinsCard
-          data={sentimentData}
-          title="Top Negative Sentiment Coins"
-          type="sell"
-        />
-        <SentimentTrendCard
-          data={sentimentData}
-          title="Sentiment Trends Over Time"
-        />
+      {/* Video Cards */}
+      <div className="grid grid-cols-1 gap-6">
+        {sentimentData && Object.entries(sentimentData.videos).map(([videoId, video]) => (
+          <VideoCard 
+            key={videoId} 
+            videoId={videoId} 
+            video={video} 
+            sentimentFilter={sentimentFilter}
+          />
+        ))}
       </div>
-
-      {/* Existing Video Cards */}
-      {sentimentData && Object.entries(sentimentData.videos).map(([videoId, video]) => (
-        <VideoCard 
-          key={videoId} 
-          videoId={videoId} 
-          video={video} 
-          sentimentFilter={sentimentFilter}
-        />
-      ))}
     </div>
   );
 }

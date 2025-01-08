@@ -7,9 +7,10 @@ interface TopCoinsCardProps {
   data: SentimentData | null;
   title: string;
   type: "buy" | "sell" | "others";
+  className?: string;
 }
 
-export function TopCoinsCard({ data, title, type }: TopCoinsCardProps) {
+export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps) {
   const processData = () => {
     if (!data) return [];
     
@@ -43,7 +44,7 @@ export function TopCoinsCard({ data, title, type }: TopCoinsCardProps) {
   };
 
   return (
-    <Card className="col-span-2">
+    <Card className={className}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
