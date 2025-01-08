@@ -20,11 +20,12 @@ export function CoinSentimentView() {
   const [selectedCoin, setSelectedCoin] = useState<string>("");
   const [availableCoins, setAvailableCoins] = useState<string[]>([]);
   const [sentimentData, setSentimentData] = useState<SentimentData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadingCoins, setLoadingCoins] = useState(true);
   const [sentimentFilter, setSentimentFilter] = useState<SentimentFilter>("all");
   const { toast } = useToast();
 
+  // Fetch available coins only once when component mounts
   useEffect(() => {
     const fetchCoins = async () => {
       try {
@@ -34,9 +35,12 @@ export function CoinSentimentView() {
           throw new Error('Failed to fetch coins');
         }
         const data = await response.json();
-        setAvailableCoins(data.coins);
-        if (data.coins.length > 0 && !selectedCoin) {
-          setSelectedCoin(data.coins[0]);
+        if (data.coins && Array.isArray(data.coins)) {
+          setAvailableCoins(data.coins);
+          // Only set initial selected coin if we have coins and none is selected
+          if (data.coins.length > 0 && !selectedCoin) {
+            setSelectedCoin(data.coins[0]);
+          }
         }
       } catch (error) {
         console.error('Error fetching coins:', error);
@@ -53,12 +57,15 @@ export function CoinSentimentView() {
     fetchCoins();
   }, [toast]);
 
+  // Fetch sentiment data only when a coin is selected
   useEffect(() => {
     const fetchSentimentData = async () => {
       if (!selectedCoin) return;
       
       try {
         setLoading(true);
+        setSentimentData(null); // Clear previous data
+        
         const response = await fetch(`https://crypto.techrealm.pk/coin/${selectedCoin}`);
         if (!response.ok) {
           throw new Error('Failed to fetch sentiment data');
@@ -77,7 +84,9 @@ export function CoinSentimentView() {
       }
     };
 
-    fetchSentimentData();
+    if (selectedCoin) {
+      fetchSentimentData();
+    }
   }, [selectedCoin, toast]);
 
   const calculateSentiments = () => {
