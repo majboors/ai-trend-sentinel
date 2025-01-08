@@ -91,7 +91,7 @@ export default function ProfitPredictions() {
             exitPrice: currentPrice,
             amount: coinsAmount,
             profitLoss: potentialProfit,
-            type: potentialProfit > 0 ? 'BUY' : 'SELL' // Using uppercase BUY/SELL to match database constraints
+            type: potentialProfit > 0 ? 'BUY' : 'SELL'
           });
         }
 
@@ -153,7 +153,7 @@ export default function ProfitPredictions() {
           amount,
           profit_loss: profitLoss,
           type,
-          status: 'OPEN' // Ensuring status is uppercase to match the constraint
+          status: 'OPEN' // Using uppercase OPEN to match the check constraint
         });
 
       if (error) {
