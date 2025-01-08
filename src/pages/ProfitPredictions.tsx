@@ -142,8 +142,8 @@ export default function ProfitPredictions() {
           amount,
           profit_loss: profitLoss,
           type,
-          status: 'OPEN', // Changed from 'completed' to 'OPEN' to match the database constraint
-          closed_at: new Date().toISOString()
+          status: 'OPEN',
+          closed_at: null // Don't set closed_at for open trades
         });
 
       if (error) {
