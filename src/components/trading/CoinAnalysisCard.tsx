@@ -17,7 +17,12 @@ export function CoinAnalysisCard({
   onBuy,
   onLiveAnalyze 
 }: CoinAnalysisCardProps) {
-  const determineStrategy = (sentiment: any) => {
+  const determineStrategy = (sentiment: { neutral: number; positive: number; negative: number; }) => {
+    if (!sentiment) {
+      console.warn("No sentiment data provided");
+      return "hold";
+    }
+
     const { neutral, positive, negative } = sentiment;
     console.log("Sentiment values:", { neutral, positive, negative });
 
@@ -64,7 +69,7 @@ export function CoinAnalysisCard({
       </div>
 
       <div className="space-y-6">
-        <CoinChart data={coin.chartData} />
+        <CoinChart coin={coin} />
         
         <div className="grid grid-cols-2 gap-4">
           <div>
