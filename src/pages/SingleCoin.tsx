@@ -84,8 +84,8 @@ export default function SingleCoin() {
           symbol: id,
           entry_price: latestPrice,
           amount: amount,
-          type: 'BUY',
-          status: 'open', // Changed from 'OPEN' to 'open' to match the enum type
+          type: 'buy', // Changed from 'BUY' to 'buy' to match the expected format
+          status: 'open',
           profit_loss: profitLoss
         })
         .select()
