@@ -245,6 +245,39 @@ export type Database = {
         }
         Relationships: []
       }
+      whale_trades: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          price: number
+          symbol: string
+          timestamp: string
+          trade_type: Database["public"]["Enums"]["whale_trade_type"]
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          price: number
+          symbol: string
+          timestamp?: string
+          trade_type: Database["public"]["Enums"]["whale_trade_type"]
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          price?: number
+          symbol?: string
+          timestamp?: string
+          trade_type?: Database["public"]["Enums"]["whale_trade_type"]
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -256,6 +289,7 @@ export type Database = {
       account_type: "spot" | "margin"
       prediction_status: "active" | "completed" | "cancelled"
       trade_status: "open" | "closed" | "cancelled"
+      whale_trade_type: "buy" | "sell"
     }
     CompositeTypes: {
       [_ in never]: never

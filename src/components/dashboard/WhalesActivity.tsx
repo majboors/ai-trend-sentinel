@@ -11,14 +11,9 @@ import {
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
+import type { Database } from "@/integrations/supabase/types";
 
-interface WhaleTrade {
-  id: string;
-  symbol: string;
-  amount: number;
-  trade_type: 'buy' | 'sell';
-  timestamp: string;
-}
+type WhaleTrade = Database['public']['Tables']['whale_trades']['Row'];
 
 export function WhalesActivity() {
   const [whales, setWhales] = useState<WhaleTrade[]>([]);
