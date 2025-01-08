@@ -71,7 +71,7 @@ export default function ProfitPredictions() {
       const coins = response.data;
       if (!viewData) return [];
 
-      const profits: CoinProfit[] = coins.map((coin: any) => {
+      const profits = coins.map((coin: any) => {
         const initialInvestment = Number(viewData.initial_amount);
         const currentPrice = parseFloat(coin.lastPrice);
         const priceChange = parseFloat(coin.priceChangePercent);
@@ -91,7 +91,7 @@ export default function ProfitPredictions() {
             exitPrice: currentPrice,
             amount: coinsAmount,
             profitLoss: potentialProfit,
-            type: potentialProfit > 0 ? 'buy' : 'sell' // Changed to use 'buy'/'sell' instead of 'profit'/'loss'
+            type: potentialProfit > 0 ? 'BUY' : 'SELL' // Using uppercase BUY/SELL to match database constraints
           });
         }
 
@@ -142,7 +142,7 @@ export default function ProfitPredictions() {
           amount,
           profit_loss: profitLoss,
           type,
-          status: 'open'
+          status: 'OPEN'
         });
 
       if (error) {
