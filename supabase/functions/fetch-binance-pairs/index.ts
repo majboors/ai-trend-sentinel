@@ -10,7 +10,10 @@ const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: corsHeaders,
+      status: 200
+    });
   }
 
   try {
@@ -46,20 +49,36 @@ serve(async (req) => {
     console.log('Fetching trading pairs for user:', user.id);
     
     try {
-      // Fetch exchange information from Binance
+      // Fetch exchange information from Binance with proper error handling
       console.log('Fetching exchange info...');
-      const exchangeInfoResponse = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+      const exchangeInfoResponse = await fetch('https://api.binance.com/api/v3/exchangeInfo', {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Supabase Edge Function'
+        }
+      });
+      
       if (!exchangeInfoResponse.ok) {
+        console.error('Exchange info response not OK:', exchangeInfoResponse.status);
         throw new Error(`Failed to fetch exchange info: ${exchangeInfoResponse.statusText}`);
       }
+      
       const exchangeInfo = await exchangeInfoResponse.json();
       
-      // Fetch 24hr ticker price changes
+      // Fetch 24hr ticker price changes with proper error handling
       console.log('Fetching ticker data...');
-      const tickerResponse = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+      const tickerResponse = await fetch('https://api.binance.com/api/v3/ticker/24hr', {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Supabase Edge Function'
+        }
+      });
+      
       if (!tickerResponse.ok) {
+        console.error('Ticker response not OK:', tickerResponse.status);
         throw new Error(`Failed to fetch ticker data: ${tickerResponse.statusText}`);
       }
+      
       const tickerData = await tickerResponse.json();
 
       // Create a map of ticker data for quick lookup

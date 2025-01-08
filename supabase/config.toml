@@ -9,3 +9,6 @@ verify_jwt = true
 
 [functions.fetch-binance-margin]
 verify_jwt = true
+
+[functions.fetch-binance-pairs]
+verify_jwt = true
