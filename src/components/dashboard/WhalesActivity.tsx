@@ -31,7 +31,7 @@ export function WhalesActivity() {
           .from('whale_trades')
           .select('*')
           .order('timestamp', { ascending: false })
-          .limit(10);
+          .limit(20); // Increased limit to show more trades
 
         if (dbError) {
           console.error('Error fetching cached whale trades:', dbError);
@@ -85,7 +85,7 @@ export function WhalesActivity() {
         }, 
         payload => {
           console.log('Received new whale trade:', payload);
-          setWhales(current => [payload.new as WhaleTrade, ...current.slice(0, 9)]);
+          setWhales(current => [payload.new as WhaleTrade, ...current.slice(0, 19)]);
         }
       )
       .subscribe();
@@ -124,11 +124,12 @@ export function WhalesActivity() {
 
   return (
     <Card className="glass-card p-6">
-      <h3 className="text-sm font-medium text-muted-foreground mb-4">Whales Activity</h3>
+      <h3 className="text-sm font-medium text-muted-foreground mb-4">Market Activity</h3>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Symbol</TableHead>
+            <TableHead>Price</TableHead>
             <TableHead>Amount</TableHead>
             <TableHead>Time</TableHead>
           </TableRow>
@@ -137,7 +138,8 @@ export function WhalesActivity() {
           {whales.map((whale) => (
             <TableRow key={whale.id}>
               <TableCell className="font-mono">{whale.symbol}</TableCell>
-              <TableCell className={`flex items-center gap-1 ${whale.trade_type === 'buy' ? 'profit' : 'loss'}`}>
+              <TableCell>${whale.price.toFixed(4)}</TableCell>
+              <TableCell className={`flex items-center gap-1 ${whale.trade_type === 'buy' ? 'text-green-500' : 'text-red-500'}`}>
                 {whale.trade_type === 'buy' ? (
                   <ArrowUpIcon className="h-4 w-4" />
                 ) : (

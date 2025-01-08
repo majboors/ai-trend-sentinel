@@ -1,16 +1,19 @@
 import { BinanceTrade, WhaleTrade } from '../utils/types.ts';
 
-const WHALE_THRESHOLD = 100000; // $100k threshold
+const WHALE_THRESHOLD = 1000; // Lower threshold to $1000 to show more trades
 
 export function processTradesForWhales(
   trades: BinanceTrade[],
   symbol: string,
-  userId: string
+  userId: string,
+  tradeType: 'margin' | 'spot' = 'margin'
 ): WhaleTrade[] {
+  console.log(`Processing ${tradeType} trades for ${symbol}...`);
+  
   const processedTrades = trades.map((trade) => {
     const tradeValue = parseFloat(trade.price) * parseFloat(trade.qty);
     
-    console.log(`Trade details for ${symbol}:
+    console.log(`${tradeType.toUpperCase()} Trade details for ${symbol}:
       ID: ${trade.id}
       Price: ${trade.price}
       Quantity: ${trade.qty}
@@ -32,7 +35,7 @@ export function processTradesForWhales(
   const whaleTrades = processedTrades.filter((trade) => {
     const isWhale = trade.amount > WHALE_THRESHOLD;
     if (isWhale) {
-      console.log(`Found whale trade for ${symbol}:
+      console.log(`Found ${tradeType} whale trade for ${symbol}:
         Amount: $${trade.amount.toFixed(2)}
         Type: ${trade.trade_type}
         Time: ${trade.timestamp}`
@@ -41,6 +44,6 @@ export function processTradesForWhales(
     return isWhale;
   });
 
-  console.log(`Found ${whaleTrades.length} whale trades for ${symbol}`);
+  console.log(`Found ${whaleTrades.length} whale trades for ${symbol} in ${tradeType} account`);
   return whaleTrades;
 }
