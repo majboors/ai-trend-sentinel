@@ -78,7 +78,7 @@ export function CoinAnalysisCard({
           </div>
           <div>
             <h4 className="font-semibold mb-2">24h Change</h4>
-            <p className={coin.priceChange >= 0 ? "profit text-lg" : "loss text-lg"}>
+            <p className={coin.priceChange >= 0 ? "text-green-500 text-lg" : "text-red-500 text-lg"}>
               {coin.priceChange}%
             </p>
           </div>
@@ -87,6 +87,24 @@ export function CoinAnalysisCard({
         <div>
           <h4 className="font-semibold mb-2">Analysis</h4>
           <p className="text-muted-foreground">{coin.analysis}</p>
+        </div>
+
+        <div>
+          <h4 className="font-semibold mb-2">Sentiment Analysis</h4>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Neutral</p>
+              <p className="text-lg">{coin.sentiment.neutral}%</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Positive</p>
+              <p className="text-lg text-green-500">{coin.sentiment.positive}%</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Negative</p>
+              <p className="text-lg text-red-500">{coin.sentiment.negative}%</p>
+            </div>
+          </div>
         </div>
       </div>
     </Card>

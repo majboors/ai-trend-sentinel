@@ -161,10 +161,20 @@ export function TradingSuggestions() {
   };
 
   const handleLiveAnalyze = () => {
-    setShowLiveAnalysis(true);
+    setShowLiveAnalysis(prev => !prev);
     toast({
-      title: "Live Analysis Started",
-      description: "Real-time market data analysis has begun.",
+      title: showLiveAnalysis ? "Live Analysis Stopped" : "Live Analysis Started",
+      description: showLiveAnalysis 
+        ? "Real-time market data analysis has stopped."
+        : "Real-time market data analysis has begun.",
+    });
+  };
+
+  const handleCloseLiveAnalysis = () => {
+    setShowLiveAnalysis(false);
+    toast({
+      title: "Live Analysis Stopped",
+      description: "Real-time market data analysis has stopped.",
     });
   };
 
@@ -216,6 +226,7 @@ export function TradingSuggestions() {
             onNext={handleNext}
             onBuy={handleBuy}
             onLiveAnalyze={handleLiveAnalyze}
+            onCloseLiveAnalysis={handleCloseLiveAnalysis}
           />
         )
       )}

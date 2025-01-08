@@ -9,6 +9,7 @@ interface AnalysisViewProps {
   onNext: () => void;
   onBuy: () => void;
   onLiveAnalyze: () => void;
+  onCloseLiveAnalysis: () => void;
 }
 
 export function AnalysisView({ 
@@ -16,7 +17,8 @@ export function AnalysisView({
   showLiveAnalysis, 
   onNext, 
   onBuy, 
-  onLiveAnalyze 
+  onLiveAnalyze,
+  onCloseLiveAnalysis
 }: AnalysisViewProps) {
   return (
     <div className="relative flex">
@@ -28,7 +30,7 @@ export function AnalysisView({
           onLiveAnalyze={onLiveAnalyze}
         />
       </div>
-      {showLiveAnalysis && <LiveAnalysisSidebar />}
+      {showLiveAnalysis && <LiveAnalysisSidebar onClose={onCloseLiveAnalysis} />}
     </div>
   );
 }
