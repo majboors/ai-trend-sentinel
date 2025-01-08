@@ -78,7 +78,7 @@ export function useCoinData() {
           body: {
             includeKlines: true,
             interval: '1h',
-            limit: '100'  // Pass limit as string
+            limit: '100'  // Ensure limit is passed as a string
           }
         });
 
