@@ -12,6 +12,29 @@ interface CoinAnalysisCardProps {
 }
 
 export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps) {
+  // Function to determine strategy based on sentiment
+  const determineStrategy = (sentimentData: any) => {
+    if (!sentimentData || !Array.isArray(sentimentData)) {
+      return coin.strategy;
+    }
+
+    const neutral = sentimentData.find(s => s.type === "Neutral")?.value || 0;
+    const positive = sentimentData.find(s => s.type === "Positive")?.value || 0;
+    const negative = sentimentData.find(s => s.type === "Negative")?.value || 0;
+
+    if (neutral > 50) {
+      return "COIN IS DEAD";
+    }
+    if (positive > 20) {
+      return "buy";
+    }
+    if (negative > 10) {
+      return "do not buy";
+    }
+
+    return coin.strategy;
+  };
+
   return (
     <Card className="p-6 space-y-8 bg-card/50 backdrop-blur-sm border-white/10">
       <div className="flex justify-between items-start">
@@ -41,7 +64,15 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
       <CoinChart coin={coin} />
 
       <div className="p-4 bg-card/30 rounded-lg">
-        <MarketSentiment />
+        <MarketSentiment 
+          onSentimentChange={(sentimentData) => {
+            const newStrategy = determineStrategy(sentimentData);
+            if (newStrategy !== coin.strategy) {
+              // Update the coin strategy if needed
+              coin.strategy = newStrategy;
+            }
+          }}
+        />
       </div>
 
       <div className="space-y-3">
@@ -49,9 +80,11 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
         <p className={`text-lg font-bold ${
           coin.strategy === "buy" 
             ? "text-green-500" 
-            : coin.strategy === "sell" 
+            : coin.strategy === "sell" || coin.strategy === "do not buy"
               ? "text-red-500" 
-              : "text-yellow-500"
+              : coin.strategy === "COIN IS DEAD"
+                ? "text-yellow-500"
+                : "text-yellow-500"
         }`}>
           {coin.strategy.toUpperCase()}
         </p>

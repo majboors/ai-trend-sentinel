@@ -9,13 +9,17 @@ interface SentimentData {
   color: string;
 }
 
+interface MarketSentimentProps {
+  onSentimentChange?: (sentimentData: SentimentData[]) => void;
+}
+
 const defaultSentimentData: SentimentData[] = [
   { type: "Positive", value: 70, color: "bg-green-500" },
   { type: "Neutral", value: 20, color: "bg-yellow-500" },
   { type: "Negative", value: 10, color: "bg-red-500" },
 ];
 
-export function MarketSentiment() {
+export function MarketSentiment({ onSentimentChange }: MarketSentimentProps) {
   const [selectedCoin, setSelectedCoin] = useState<string>("market");
   const [availableCoins, setAvailableCoins] = useState<string[]>([]);
   const [sentimentData, setSentimentData] = useState<SentimentData[]>(defaultSentimentData);
@@ -86,6 +90,13 @@ export function MarketSentiment() {
       { type: "Negative", value: Math.round((sellCount / total) * 100), color: "bg-red-500" },
     ];
   };
+
+  // Update parent component when sentiment data changes
+  useEffect(() => {
+    if (onSentimentChange) {
+      onSentimentChange(sentimentData);
+    }
+  }, [sentimentData, onSentimentChange]);
 
   // Fetch sentiment data when coin is selected
   useEffect(() => {
