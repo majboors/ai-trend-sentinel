@@ -107,6 +107,48 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          amount: number
+          coin_symbol: string
+          created_at: string | null
+          direction: string
+          error_message: string | null
+          id: string
+          percentage: number
+          sent_at: string | null
+          status: Database["public"]["Enums"]["notification_status"] | null
+          trading_view_name: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          coin_symbol: string
+          created_at?: string | null
+          direction: string
+          error_message?: string | null
+          id?: string
+          percentage: number
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"] | null
+          trading_view_name: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          coin_symbol?: string
+          created_at?: string | null
+          direction?: string
+          error_message?: string | null
+          id?: string
+          percentage?: number
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"] | null
+          trading_view_name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       prediction_trades: {
         Row: {
           amount: number
@@ -349,6 +391,7 @@ export type Database = {
     }
     Enums: {
       account_type: "spot" | "margin"
+      notification_status: "pending" | "sent" | "failed"
       prediction_status: "active" | "completed" | "cancelled"
       trade_status: "open" | "closed" | "cancelled"
       whale_trade_type: "buy" | "sell"

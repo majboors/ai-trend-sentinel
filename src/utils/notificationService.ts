@@ -1,4 +1,5 @@
-// Queue implementation for notifications
+import { supabase } from "@/integrations/supabase/client";
+
 interface QueuedNotification {
   coin: string;
   direction: 'UP' | 'DOWN';
@@ -11,11 +12,52 @@ interface QueuedNotification {
 let notificationQueue: QueuedNotification[] = [];
 let isProcessingQueue = false;
 let lastNotificationTime = 0;
-const RATE_LIMIT_WINDOW = 30000; // 30 seconds between notifications
+const RATE_LIMIT_WINDOW = 60000; // Increased to 60 seconds between notifications
 const MAX_RETRIES = 3;
-const MAX_QUEUE_SIZE = 50; // Reduced queue size
+const MAX_QUEUE_SIZE = 25; // Reduced queue size for better management
 const MIN_PERCENTAGE_CHANGE = 5; // Only notify for 5% or greater changes
 const NOTIFICATION_COOLDOWN: Record<string, number> = {}; // Track last notification time per coin
+
+const storeNotification = async (notification: QueuedNotification) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return;
+
+  const { error } = await supabase
+    .from('notifications')
+    .insert({
+      user_id: session.user.id,
+      coin_symbol: notification.coin,
+      direction: notification.direction,
+      percentage: notification.percentage,
+      trading_view_name: notification.tradingViewName,
+      amount: notification.amount,
+      status: 'pending'
+    });
+
+  if (error) {
+    console.error('Error storing notification:', error);
+  }
+};
+
+const updateNotificationStatus = async (coin: string, status: 'sent' | 'failed', errorMessage?: string) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return;
+
+  const { error } = await supabase
+    .from('notifications')
+    .update({
+      status,
+      error_message: errorMessage,
+      sent_at: status === 'sent' ? new Date().toISOString() : null
+    })
+    .eq('user_id', session.user.id)
+    .eq('coin_symbol', coin)
+    .eq('status', 'pending');
+
+  if (error) {
+    console.error('Error updating notification status:', error);
+  }
+};
 
 const processQueue = async () => {
   if (isProcessingQueue || notificationQueue.length === 0) return;
@@ -25,7 +67,6 @@ const processQueue = async () => {
   
   try {
     if (now - lastNotificationTime >= RATE_LIMIT_WINDOW) {
-      // Sort queue by percentage change (highest first)
       notificationQueue.sort((a, b) => Math.abs(b.percentage) - Math.abs(a.percentage));
       
       const notification = notificationQueue.shift();
@@ -42,7 +83,6 @@ const processQueue = async () => {
     console.error('Error processing notification queue:', error);
   } finally {
     isProcessingQueue = false;
-    // Continue processing queue if there are more items
     if (notificationQueue.length > 0) {
       setTimeout(processQueue, RATE_LIMIT_WINDOW);
     }
@@ -63,14 +103,15 @@ const sendNotification = async (notification: QueuedNotification, retryCount = 0
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.text();
       console.error('Notification error:', {
         status: response.status,
         statusText: response.statusText,
         error: errorData
       });
       
-      // Only retry on rate limit errors with exponential backoff
+      await updateNotificationStatus(coin, 'failed', `HTTP ${response.status}: ${errorData}`);
+      
       if (retryCount < MAX_RETRIES && response.status === 429) {
         const backoffTime = RATE_LIMIT_WINDOW * Math.pow(2, retryCount);
         console.log(`Rate limited. Retrying in ${backoffTime/1000}s (${retryCount + 1}/${MAX_RETRIES})...`);
@@ -79,6 +120,7 @@ const sendNotification = async (notification: QueuedNotification, retryCount = 0
         }, backoffTime);
       }
     } else {
+      await updateNotificationStatus(coin, 'sent');
       console.log('Notification sent successfully:', {
         coin,
         direction,
@@ -88,7 +130,8 @@ const sendNotification = async (notification: QueuedNotification, retryCount = 0
     }
   } catch (error) {
     console.error('Failed to send notification:', error);
-    // Retry on network errors with exponential backoff
+    await updateNotificationStatus(coin, 'failed', error instanceof Error ? error.message : 'Unknown error');
+    
     if (retryCount < MAX_RETRIES) {
       const backoffTime = RATE_LIMIT_WINDOW * Math.pow(2, retryCount);
       setTimeout(() => {
@@ -105,37 +148,37 @@ export const sendTradeNotification = async (
   tradingViewName: string,
   amount: number
 ) => {
-  // Only notify for significant price changes
   if (Math.abs(percentage) < MIN_PERCENTAGE_CHANGE) {
     return;
   }
 
   const now = Date.now();
-  
-  // Check if we've recently sent a notification for this coin
   const lastNotification = NOTIFICATION_COOLDOWN[coin] || 0;
+  
   if (now - lastNotification < RATE_LIMIT_WINDOW * 2) {
     console.log(`Skipping notification for ${coin}: too recent`);
     return;
   }
   
-  // Prevent queue from growing too large
+  const notification = {
+    coin,
+    direction,
+    percentage,
+    tradingViewName,
+    amount,
+    timestamp: now
+  };
+
+  await storeNotification(notification);
+  
   if (notificationQueue.length >= MAX_QUEUE_SIZE) {
-    // Replace oldest notification if new one has higher percentage
     const lowestPercentageIdx = notificationQueue
       .reduce((minIdx, n, idx, arr) => 
         Math.abs(n.percentage) < Math.abs(arr[minIdx].percentage) ? idx : minIdx
       , 0);
     
     if (Math.abs(percentage) > Math.abs(notificationQueue[lowestPercentageIdx].percentage)) {
-      notificationQueue[lowestPercentageIdx] = {
-        coin,
-        direction,
-        percentage,
-        tradingViewName,
-        amount,
-        timestamp: now
-      };
+      notificationQueue[lowestPercentageIdx] = notification;
       console.log(`Replaced older notification with higher impact change for ${coin}`);
     } else {
       console.log(`Queue full: Skipping lower impact notification for ${coin}`);
@@ -143,19 +186,8 @@ export const sendTradeNotification = async (
     return;
   }
   
-  // Add notification to queue
-  notificationQueue.push({
-    coin,
-    direction,
-    percentage,
-    tradingViewName,
-    amount,
-    timestamp: now
-  });
-  
-  // Update cooldown
+  notificationQueue.push(notification);
   NOTIFICATION_COOLDOWN[coin] = now;
   
-  // Start processing queue if not already processing
   void processQueue();
 };
