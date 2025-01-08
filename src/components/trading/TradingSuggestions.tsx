@@ -31,8 +31,10 @@ export function TradingSuggestions() {
 
   const handleCreateTradeView = async (name: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      
+      if (!sessionData.session) {
         toast({
           title: "Error",
           description: "Please sign in to start analysis",
@@ -44,12 +46,20 @@ export function TradingSuggestions() {
       const { data, error: insertError } = await supabase
         .from('trade_views')
         .insert([
-          { name, user_id: session.user.id }
+          { 
+            name, 
+            user_id: sessionData.session.user.id,
+            status: 'active'
+          }
         ])
         .select()
         .single();
 
       if (insertError) throw insertError;
+
+      if (!data) {
+        throw new Error('No data returned from insert');
+      }
 
       setTradeView({
         id: data.id,
@@ -68,7 +78,7 @@ export function TradingSuggestions() {
       console.error('Error creating trade view:', error);
       toast({
         title: "Error",
-        description: "Failed to start analysis",
+        description: "Failed to start analysis. Please try again.",
         variant: "destructive",
       });
     }
