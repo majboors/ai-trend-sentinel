@@ -54,14 +54,14 @@ serve(async (req) => {
     console.log("Successfully retrieved API keys");
 
     // First fetch isolated margin account details
-    const timestamp = Date.now();
-    const queryString = `timestamp=${timestamp}`;
-    const signature = await createHmac(apiKeys.binance_api_secret, queryString);
+    const accountTimestamp = Date.now();
+    const accountQueryString = `timestamp=${accountTimestamp}`;
+    const accountSignature = await createHmac(apiKeys.binance_api_secret, accountQueryString);
 
     console.log("Fetching isolated margin account details...");
 
     const marginResponse = await fetch(
-      `https://api.binance.com/sapi/v1/margin/isolated/account?${queryString}&signature=${signature}`,
+      `https://api.binance.com/sapi/v1/margin/isolated/account?${accountQueryString}&signature=${accountSignature}`,
       {
         headers: {
           "X-MBX-APIKEY": apiKeys.binance_api_key,
@@ -77,7 +77,7 @@ serve(async (req) => {
 
     const marginData = await marginResponse.json();
     console.log("Successfully fetched margin account details");
-    
+
     const whales = [];
 
     // Fetch trades for each isolated margin pair
@@ -86,7 +86,7 @@ serve(async (req) => {
       console.log(`Fetching trades for ${symbol}...`);
 
       const tradeTimestamp = Date.now();
-      const tradeQueryString = `symbol=${symbol}&isIsolated=TRUE&timestamp=${tradeTimestamp}`;
+      const tradeQueryString = `symbol=${symbol}&isIsolated=TRUE&limit=100&timestamp=${tradeTimestamp}`;
       const tradeSignature = await createHmac(apiKeys.binance_api_secret, tradeQueryString);
 
       try {
@@ -106,7 +106,7 @@ serve(async (req) => {
 
         const trades = await tradesResponse.json();
         console.log(`Found ${trades.length} trades for ${symbol}`);
-        
+
         // Process and filter whale trades (trades > $100k)
         const whaleTrades = trades
           .filter((trade: any) => {
