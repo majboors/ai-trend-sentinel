@@ -91,7 +91,7 @@ export default function ProfitPredictions() {
             exitPrice: currentPrice,
             amount: coinsAmount,
             profitLoss: potentialProfit,
-            type: 'buy' // Changed from 'BUY' to 'buy' to match database constraint
+            type: potentialProfit > 0 ? 'profit' : 'loss' // Changed back to profit/loss type
           });
         }
 
