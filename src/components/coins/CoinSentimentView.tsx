@@ -19,6 +19,8 @@ interface SentimentData {
         comment_response: string;
         indicator: string;
         text: string;
+        title: string;
+        title_response: string;
       }[];
     };
   };
@@ -178,7 +180,10 @@ export function CoinSentimentView() {
             {video.comments.map((comment, index) => (
               <div key={index} className="border-l-4 border-primary p-4 bg-muted/50 rounded">
                 <p className="text-sm text-muted-foreground mb-2">Author: {comment.author}</p>
-                <p className="mb-2">{comment.text}</p>
+                <p className="mb-2 group relative">
+                  <span className="block group-hover:hidden">{comment.title_response}</span>
+                  <span className="hidden group-hover:block">{comment.text}</span>
+                </p>
                 <p className="text-sm">
                   Sentiment: <span className={`font-semibold ${
                     comment.indicator === 'buy' ? 'text-green-500' :
