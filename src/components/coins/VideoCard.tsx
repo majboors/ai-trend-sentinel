@@ -5,9 +5,18 @@ import { Card } from "@/components/ui/card";
 interface VideoCardProps {
   videoId: string;
   video: Video;
+  sentimentFilter: "all" | "buy" | "sell" | "others";
 }
 
-export function VideoCard({ videoId, video }: VideoCardProps) {
+export function VideoCard({ videoId, video, sentimentFilter }: VideoCardProps) {
+  const filteredComments = video.comments.filter(
+    comment => sentimentFilter === "all" || comment.indicator === sentimentFilter
+  );
+
+  if (filteredComments.length === 0) {
+    return null;
+  }
+
   return (
     <Card className="p-6">
       <div className="mb-4">
@@ -18,7 +27,7 @@ export function VideoCard({ videoId, video }: VideoCardProps) {
         </p>
       </div>
       <div className="space-y-4">
-        {video.comments.map((comment, index) => (
+        {filteredComments.map((comment, index) => (
           <CommentCard key={index} comment={comment} />
         ))}
       </div>

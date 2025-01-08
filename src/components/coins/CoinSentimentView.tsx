@@ -8,9 +8,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { VideoCard } from "./VideoCard";
 import { SentimentStats } from "./SentimentStats";
 import type { SentimentData } from "./types";
+
+type SentimentFilter = "all" | "buy" | "sell" | "others";
 
 export function CoinSentimentView() {
   const [selectedCoin, setSelectedCoin] = useState<string>("");
@@ -18,6 +22,7 @@ export function CoinSentimentView() {
   const [sentimentData, setSentimentData] = useState<SentimentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingCoins, setLoadingCoins] = useState(true);
+  const [sentimentFilter, setSentimentFilter] = useState<SentimentFilter>("all");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -121,11 +126,43 @@ export function CoinSentimentView() {
           </Select>
         </div>
 
+        <div className="mb-6">
+          <Label className="text-sm font-medium mb-2">Filter Comments</Label>
+          <RadioGroup
+            defaultValue="all"
+            value={sentimentFilter}
+            onValueChange={(value) => setSentimentFilter(value as SentimentFilter)}
+            className="flex space-x-4 mt-2"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="all" id="all" />
+              <Label htmlFor="all">All</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="buy" id="buy" />
+              <Label htmlFor="buy" className="text-green-500">Buy</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="sell" id="sell" />
+              <Label htmlFor="sell" className="text-red-500">Sell</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="others" id="others" />
+              <Label htmlFor="others" className="text-yellow-500">Others</Label>
+            </div>
+          </RadioGroup>
+        </div>
+
         <SentimentStats loading={loading} stats={calculateSentiments()} />
       </div>
 
       {sentimentData && Object.entries(sentimentData.videos).map(([videoId, video]) => (
-        <VideoCard key={videoId} videoId={videoId} video={video} />
+        <VideoCard 
+          key={videoId} 
+          videoId={videoId} 
+          video={video} 
+          sentimentFilter={sentimentFilter}
+        />
       ))}
     </div>
   );
