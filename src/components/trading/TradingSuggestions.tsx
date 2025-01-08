@@ -1,21 +1,14 @@
 import { useState } from "react";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import { Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { TradeNameDialog } from "./TradeNameDialog";
 import { CoinAnalysisCard } from "./CoinAnalysisCard";
 import { CoinVolatileView } from "@/components/coins/CoinVolatileView";
+import { StartAnalysisButton } from "./StartAnalysisButton";
+import { ViewTypeSelector } from "./ViewTypeSelector";
+import { AnalysisProgress } from "./AnalysisProgress";
 import { useCoinData } from "./hooks/useCoinData";
 import type { TradeViewState } from "./types";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export function TradingSuggestions() {
   const [started, setStarted] = useState(false);
@@ -30,8 +23,6 @@ export function TradingSuggestions() {
   });
 
   const { data: coins = [], isLoading, error } = useCoinData();
-
-  const progress = (tradeView.currentIndex / (coins.length || 1)) * 100;
   const currentCoin = coins[tradeView.currentIndex];
 
   const handleStart = () => {
@@ -50,7 +41,7 @@ export function TradingSuggestions() {
         return;
       }
 
-      const { data: tradeView, error } = await supabase
+      const { data, error: insertError } = await supabase
         .from('trade_views')
         .insert([
           { name, user_id: session.user.id }
@@ -58,10 +49,10 @@ export function TradingSuggestions() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
       setTradeView({
-        id: tradeView.id,
+        id: data.id,
         currentIndex: 0,
         coins: coins,
       });
@@ -153,17 +144,14 @@ export function TradingSuggestions() {
 
   if (!started) {
     return (
-      <div className="flex flex-col items-center justify-center h-[80vh] gap-4">
-        <Button onClick={handleStart} size="lg" className="gap-2">
-          <Play className="w-4 h-4" />
-          Start Analysis
-        </Button>
+      <>
+        <StartAnalysisButton onClick={handleStart} />
         <TradeNameDialog
           open={isTradeNameDialogOpen}
           onOpenChange={setIsTradeNameDialogOpen}
           onSubmit={handleCreateTradeView}
         />
-      </div>
+      </>
     );
   }
 
@@ -177,26 +165,13 @@ export function TradingSuggestions() {
 
   return (
     <div className="p-4 space-y-4">
-      <div className="w-[200px]">
-        <Select value={viewType} onValueChange={setViewType}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select view type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="suggestions">Trading Suggestions</SelectItem>
-            <SelectItem value="volatile">Volatility View</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <ViewTypeSelector value={viewType} onValueChange={setViewType} />
 
       {viewType === "volatile" ? (
         <CoinVolatileView />
       ) : (
         <>
-          <Progress value={progress} className="w-full" />
-          <p className="text-sm text-muted-foreground">
-            Analyzing coin {tradeView.currentIndex + 1} of {coins.length}
-          </p>
+          <AnalysisProgress currentIndex={tradeView.currentIndex} total={coins.length} />
 
           {currentCoin && (
             <CoinAnalysisCard
