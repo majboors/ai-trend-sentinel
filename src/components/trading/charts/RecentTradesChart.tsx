@@ -14,12 +14,21 @@ interface RecentTradesChartProps {
 }
 
 export function RecentTradesChart({ coin }: RecentTradesChartProps) {
-  const chartData = coin.recentTrades.map((trade) => ({
-    time: new Date(trade.time).toLocaleTimeString(),
-    price: parseFloat(trade.price),
-    quantity: parseFloat(trade.quantity),
-    type: trade.isBuyerMaker ? "sell" : "buy",
-  }));
+  const buyTrades = coin.recentTrades
+    .filter(trade => !trade.isBuyerMaker)
+    .map((trade) => ({
+      time: new Date(trade.time).toLocaleTimeString(),
+      price: parseFloat(trade.price),
+      quantity: parseFloat(trade.quantity),
+    }));
+
+  const sellTrades = coin.recentTrades
+    .filter(trade => trade.isBuyerMaker)
+    .map((trade) => ({
+      time: new Date(trade.time).toLocaleTimeString(),
+      price: parseFloat(trade.price),
+      quantity: parseFloat(trade.quantity),
+    }));
 
   return (
     <Card className="p-4">
@@ -31,9 +40,14 @@ export function RecentTradesChart({ coin }: RecentTradesChartProps) {
             <YAxis dataKey="price" />
             <Tooltip />
             <Scatter
-              name="Trades"
-              data={chartData}
-              fill={(entry) => (entry.type === "buy" ? "#82ca9d" : "#ff7300")}
+              name="Buy Trades"
+              data={buyTrades}
+              fill="#82ca9d"
+            />
+            <Scatter
+              name="Sell Trades"
+              data={sellTrades}
+              fill="#ff7300"
             />
           </ScatterChart>
         </ResponsiveContainer>
