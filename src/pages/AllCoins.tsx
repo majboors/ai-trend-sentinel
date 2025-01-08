@@ -4,11 +4,13 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { CoinFolderView } from "@/components/coins/CoinFolderView";
 import { CoinSplitView } from "@/components/coins/CoinSplitView";
+import { CoinSentimentView } from "@/components/coins/CoinSentimentView";
 import { Button } from "@/components/ui/button";
-import { LayoutGrid, Split } from "lucide-react";
+import { LayoutGrid, Split, BarChart } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const AllCoins = () => {
-  const [viewMode, setViewMode] = useState<"folder" | "split">("folder");
+  const [viewMode, setViewMode] = useState<"folder" | "split" | "sentiment">("folder");
   const [searchParams] = useSearchParams();
   const filter = searchParams.get("filter");
 
@@ -37,13 +39,35 @@ const AllCoins = () => {
                 >
                   <Split className="h-4 w-4" />
                 </Button>
+                <Button
+                  variant={viewMode === "sentiment" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setViewMode("sentiment")}
+                >
+                  <BarChart className="h-4 w-4" />
+                </Button>
               </div>
             </div>
             
-            {viewMode === "folder" ? 
-              <CoinFolderView filter={filter} /> : 
-              <CoinSplitView filter={filter} />
-            }
+            <Tabs value={viewMode} onValueChange={(value: "folder" | "split" | "sentiment") => setViewMode(value)}>
+              <TabsList className="mb-4">
+                <TabsTrigger value="folder">Folder View</TabsTrigger>
+                <TabsTrigger value="split">Split View</TabsTrigger>
+                <TabsTrigger value="sentiment">Sentiment</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="folder">
+                <CoinFolderView filter={filter} />
+              </TabsContent>
+              
+              <TabsContent value="split">
+                <CoinSplitView filter={filter} />
+              </TabsContent>
+              
+              <TabsContent value="sentiment">
+                <CoinSentimentView />
+              </TabsContent>
+            </Tabs>
           </div>
         </main>
       </div>
