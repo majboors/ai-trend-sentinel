@@ -28,8 +28,8 @@ export function CoinSentimentView() {
           throw new Error('Failed to fetch coins');
         }
         const data = await response.json();
-        if (isMounted) {
-          setAvailableCoins(data.coins || []);
+        if (isMounted && data.coins) {
+          setAvailableCoins(data.coins);
         }
       } catch (error) {
         console.error('Error fetching coins:', error);
