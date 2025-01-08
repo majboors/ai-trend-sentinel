@@ -79,6 +79,28 @@ export async function fetchSpotAccount(apiKey: string, apiSecret: string): Promi
   return data.balances || [];
 }
 
+export async function fetchAllTradingPairs(apiKey: string): Promise<string[]> {
+  console.log("Fetching all trading pairs...");
+  
+  const response = await fetch('https://api.binance.com/api/v3/exchangeInfo', {
+    headers: {
+      "X-MBX-APIKEY": apiKey,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch trading pairs: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const pairs = data.symbols
+    .filter((symbol: any) => symbol.status === 'TRADING')
+    .map((symbol: any) => symbol.symbol);
+  
+  console.log(`Found ${pairs.length} active trading pairs`);
+  return pairs;
+}
+
 export async function fetchTradesForSymbol(
   symbol: string,
   apiKey: string,

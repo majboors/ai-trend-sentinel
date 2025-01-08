@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { fetchMarginAccount, fetchCrossMarginAccount, fetchSpotAccount, fetchTradesForSymbol } from "./services/binanceService.ts";
+import { fetchMarginAccount, fetchCrossMarginAccount, fetchSpotAccount, fetchTradesForSymbol, fetchAllTradingPairs } from "./services/binanceService.ts";
 import { processTradesForWhales } from "./services/tradeProcessor.ts";
 import type { WhaleTrade } from "./utils/types.ts";
 
@@ -47,18 +47,36 @@ serve(async (req) => {
       throw new Error("No API keys found");
     }
 
-    console.log("Fetching all account types...");
-    
-    // Fetch all account types
-    const [marginAssets, crossMarginAssets, spotAssets] = await Promise.all([
-      fetchMarginAccount(apiKeys.binance_api_key, apiKeys.binance_api_secret),
-      fetchCrossMarginAccount(apiKeys.binance_api_key, apiKeys.binance_api_secret),
-      fetchSpotAccount(apiKeys.binance_api_key, apiKeys.binance_api_secret)
-    ]);
+    console.log("Fetching all trading pairs...");
+    const tradingPairs = await fetchAllTradingPairs(apiKeys.binance_api_key);
+    console.log(`Processing ${tradingPairs.length} trading pairs`);
 
     const allWhaleTrades: WhaleTrade[] = [];
 
+    // Process spot trades for all trading pairs
+    const spotAssets = await fetchSpotAccount(apiKeys.binance_api_key, apiKeys.binance_api_secret);
+    for (const asset of spotAssets) {
+      if (parseFloat(asset.free) > 0 || parseFloat(asset.locked) > 0) {
+        const pairs = tradingPairs.filter(pair => pair.startsWith(asset.asset));
+        for (const pair of pairs) {
+          try {
+            const trades = await fetchTradesForSymbol(
+              pair,
+              apiKeys.binance_api_key,
+              apiKeys.binance_api_secret,
+              'spot'
+            );
+            const whaleTrades = processTradesForWhales(trades, pair, user.id);
+            allWhaleTrades.push(...whaleTrades);
+          } catch (error) {
+            console.error(`Error processing spot trades for ${pair}:`, error);
+          }
+        }
+      }
+    }
+
     // Process margin trades
+    const marginAssets = await fetchMarginAccount(apiKeys.binance_api_key, apiKeys.binance_api_secret);
     for (const asset of marginAssets) {
       try {
         const trades = await fetchTradesForSymbol(
@@ -75,37 +93,23 @@ serve(async (req) => {
     }
 
     // Process cross margin trades
+    const crossMarginAssets = await fetchCrossMarginAccount(apiKeys.binance_api_key, apiKeys.binance_api_secret);
     for (const asset of crossMarginAssets) {
       if (parseFloat(asset.free) > 0 || parseFloat(asset.locked) > 0) {
-        try {
-          const trades = await fetchTradesForSymbol(
-            asset.asset + 'USDT', // Assuming USDT pairs, adjust if needed
-            apiKeys.binance_api_key,
-            apiKeys.binance_api_secret,
-            'cross'
-          );
-          const whaleTrades = processTradesForWhales(trades, asset.asset + 'USDT', user.id);
-          allWhaleTrades.push(...whaleTrades);
-        } catch (error) {
-          console.error(`Error processing cross margin trades for ${asset.asset}:`, error);
-        }
-      }
-    }
-
-    // Process spot trades
-    for (const asset of spotAssets) {
-      if (parseFloat(asset.free) > 0 || parseFloat(asset.locked) > 0) {
-        try {
-          const trades = await fetchTradesForSymbol(
-            asset.asset + 'USDT', // Assuming USDT pairs, adjust if needed
-            apiKeys.binance_api_key,
-            apiKeys.binance_api_secret,
-            'spot'
-          );
-          const whaleTrades = processTradesForWhales(trades, asset.asset + 'USDT', user.id);
-          allWhaleTrades.push(...whaleTrades);
-        } catch (error) {
-          console.error(`Error processing spot trades for ${asset.asset}:`, error);
+        const pairs = tradingPairs.filter(pair => pair.startsWith(asset.asset));
+        for (const pair of pairs) {
+          try {
+            const trades = await fetchTradesForSymbol(
+              pair,
+              apiKeys.binance_api_key,
+              apiKeys.binance_api_secret,
+              'cross'
+            );
+            const whaleTrades = processTradesForWhales(trades, pair, user.id);
+            allWhaleTrades.push(...whaleTrades);
+          } catch (error) {
+            console.error(`Error processing cross margin trades for ${pair}:`, error);
+          }
         }
       }
     }
