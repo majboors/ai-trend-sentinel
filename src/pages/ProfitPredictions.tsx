@@ -140,7 +140,7 @@ export default function ProfitPredictions() {
         amount,
         profitLoss,
         type,
-        status: 'OPEN' // Using uppercase OPEN to match the check constraint
+        status: 'OPEN'
       });
 
       const { error } = await supabase
@@ -154,7 +154,7 @@ export default function ProfitPredictions() {
           amount,
           profit_loss: profitLoss,
           type,
-          status: 'OPEN' // Using uppercase OPEN to match the check constraint
+          status: 'OPEN'  // Using uppercase OPEN to match the check constraint
         });
 
       if (error) {
