@@ -21,6 +21,8 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
     const positive = sentimentData.find(s => s.type === "Positive")?.value || 0;
     const negative = sentimentData.find(s => s.type === "Negative")?.value || 0;
 
+    console.log("Sentiment values:", { neutral, positive, negative });
+
     // First priority: Check neutral sentiment
     if (neutral > 50) {
       return "COIN IS DEAD";
@@ -36,7 +38,8 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
       return "do not buy";
     }
 
-    return coin.strategy;
+    // Default strategy if no conditions are met
+    return "hold";
   };
 
   const getStrategyColor = (strategy: Strategy): string => {
