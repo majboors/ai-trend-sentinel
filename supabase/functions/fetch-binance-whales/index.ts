@@ -60,6 +60,7 @@ serve(async (req) => {
         const pairs = tradingPairs.filter(pair => pair.startsWith(asset.asset));
         for (const pair of pairs) {
           try {
+            console.log(`Fetching spot trades for ${pair}...`);
             const trades = await fetchTradesForSymbol(
               pair,
               apiKeys.binance_api_key,
@@ -79,6 +80,7 @@ serve(async (req) => {
     const marginAssets = await fetchMarginAccount(apiKeys.binance_api_key, apiKeys.binance_api_secret);
     for (const asset of marginAssets) {
       try {
+        console.log(`Fetching margin trades for ${asset.symbol}...`);
         const trades = await fetchTradesForSymbol(
           asset.symbol,
           apiKeys.binance_api_key,
@@ -99,6 +101,7 @@ serve(async (req) => {
         const pairs = tradingPairs.filter(pair => pair.startsWith(asset.asset));
         for (const pair of pairs) {
           try {
+            console.log(`Fetching cross margin trades for ${pair}...`);
             const trades = await fetchTradesForSymbol(
               pair,
               apiKeys.binance_api_key,
