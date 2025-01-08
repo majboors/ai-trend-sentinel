@@ -1,16 +1,12 @@
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { MarketSentiment } from "@/components/dashboard/MarketSentiment";
-import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CoinVolatileView } from "@/components/coins/CoinVolatileView";
 import { supabase } from "@/integrations/supabase/client";
+import { TradeNameDialog } from "./TradeNameDialog";
+import { CoinAnalysisCard } from "./CoinAnalysisCard";
+import { CoinVolatileView } from "@/components/coins/CoinVolatileView";
 import {
   Select,
   SelectContent,
@@ -18,22 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { sendTradeNotification } from "@/utils/notificationService";
 
-interface Coin {
-  id: string;
-  name: string;
-  symbol: string;
-  currentPrice: number;
-  sentiment: {
-    positive: number;
-    neutral: number;
-    negative: number;
-  };
-  strategy: "buy" | "hold" | "sell";
-}
-
-const mockCoins: Coin[] = [
+const mockCoins = [
   {
     id: "bitcoin",
     name: "Bitcoin",
@@ -52,83 +34,117 @@ const mockCoins: Coin[] = [
 export function TradingSuggestions() {
   const [started, setStarted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [boughtCoins, setBoughtCoins] = useState<Coin[]>([]);
-  const [soldCoins, setSoldCoins] = useState<Coin[]>([]);
-  const [isBuyDialogOpen, setIsBuyDialogOpen] = useState(false);
-  const [margin, setMargin] = useState("");
-  const [stopLoss, setStopLoss] = useState("");
+  const [isTradeNameDialogOpen, setIsTradeNameDialogOpen] = useState(false);
   const [viewType, setViewType] = useState<string>("suggestions");
+  const [tradeViewId, setTradeViewId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const progress = (currentIndex / mockCoins.length) * 100;
   const currentCoin = mockCoins[currentIndex];
 
   const handleStart = () => {
-    setStarted(true);
-    toast({
-      title: "Analysis Started",
-      description: "Analyzing coins for trading suggestions...",
-    });
+    setIsTradeNameDialogOpen(true);
   };
 
-  const handleNext = () => {
-    if (currentIndex < mockCoins.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-      if (currentCoin.strategy === "buy") {
-        setBoughtCoins(prev => [...prev, currentCoin]);
-      } else if (currentCoin.strategy === "sell") {
-        setSoldCoins(prev => [...prev, currentCoin]);
-      }
-    } else {
-      toast({
-        title: "Analysis Complete",
-        description: "You've reviewed all available coins.",
-      });
-    }
-  };
-
-  const handleBuy = async () => {
+  const handleCreateTradeView = async (name: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast({
           title: "Error",
-          description: "Please sign in to trade",
+          description: "Please sign in to start analysis",
           variant: "destructive",
         });
         return;
       }
 
-      // Get or create prediction view
-      const { data: viewData } = await supabase
-        .from('prediction_views')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .eq('status', 'active')
+      const { data: tradeView, error } = await supabase
+        .from('trade_views')
+        .insert([
+          { name, user_id: session.user.id }
+        ])
+        .select()
         .single();
 
-      if (viewData) {
-        // Send initial notification
-        sendTradeNotification(
-          currentCoin.symbol,
-          'UP',
-          parseFloat(margin),
-          viewData.name,
-          (parseFloat(margin) / 100) * currentCoin.currentPrice
-        );
-      }
+      if (error) throw error;
 
+      setTradeViewId(tradeView.id);
+      setStarted(true);
+      setIsTradeNameDialogOpen(false);
       toast({
-        title: "Purchase Successful",
-        description: `Bought ${currentCoin.name} with ${margin}% margin and ${stopLoss}% stop loss`,
+        title: "Analysis Started",
+        description: "Analyzing coins for trading suggestions...",
       });
-      setIsBuyDialogOpen(false);
-      handleNext();
     } catch (error) {
-      console.error('Error handling trade:', error);
+      console.error('Error creating trade view:', error);
       toast({
         title: "Error",
-        description: "Failed to process trade",
+        description: "Failed to start analysis",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleNext = async () => {
+    if (!tradeViewId) return;
+
+    try {
+      // Save current coin analysis
+      await supabase
+        .from('coin_indicators')
+        .insert([
+          {
+            trade_view_id: tradeViewId,
+            coin_symbol: currentCoin.symbol,
+            sentiment: currentCoin.strategy,
+            indicators: currentCoin.sentiment,
+          }
+        ]);
+
+      if (currentIndex < mockCoins.length - 1) {
+        setCurrentIndex(prev => prev + 1);
+      } else {
+        toast({
+          title: "Analysis Complete",
+          description: "You've reviewed all available coins.",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving coin analysis:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save analysis",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBuy = async () => {
+    if (!tradeViewId) return;
+
+    try {
+      await supabase
+        .from('coin_indicators')
+        .insert([
+          {
+            trade_view_id: tradeViewId,
+            coin_symbol: currentCoin.symbol,
+            sentiment: currentCoin.strategy,
+            indicators: currentCoin.sentiment,
+            user_response: 'buy'
+          }
+        ]);
+
+      toast({
+        title: "Trade Recorded",
+        description: `Recorded buy decision for ${currentCoin.name}`,
+      });
+      handleNext();
+    } catch (error) {
+      console.error('Error recording trade:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record trade",
         variant: "destructive",
       });
     }
@@ -141,6 +157,11 @@ export function TradingSuggestions() {
           <Play className="w-4 h-4" />
           Start Analysis
         </Button>
+        <TradeNameDialog
+          open={isTradeNameDialogOpen}
+          onOpenChange={setIsTradeNameDialogOpen}
+          onSubmit={handleCreateTradeView}
+        />
       </div>
     );
   }
@@ -169,91 +190,12 @@ export function TradingSuggestions() {
           </p>
 
           {currentCoin && (
-            <Card className="p-6 space-y-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-2xl font-bold">{currentCoin.name}</h2>
-                  <p className="text-muted-foreground">{currentCoin.symbol}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-semibold">
-                    ${currentCoin.currentPrice.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="h-[300px]">
-                <PerformanceChart />
-              </div>
-
-              <MarketSentiment />
-
-              <div className="space-y-2">
-                <h3 className="font-semibold">Suggested Strategy</h3>
-                <p className={`text-lg font-bold ${
-                  currentCoin.strategy === "buy" 
-                    ? "text-green-500" 
-                    : currentCoin.strategy === "sell" 
-                      ? "text-red-500" 
-                      : "text-yellow-500"
-                }`}>
-                  {currentCoin.strategy.toUpperCase()}
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                {currentCoin.strategy === "buy" && (
-                  <Button onClick={() => setIsBuyDialogOpen(true)} variant="default">
-                    Buy
-                  </Button>
-                )}
-                <Button onClick={handleNext} variant="outline" className="gap-2">
-                  Next <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </Card>
+            <CoinAnalysisCard
+              coin={currentCoin}
+              onNext={handleNext}
+              onBuy={handleBuy}
+            />
           )}
-
-          <Dialog open={isBuyDialogOpen} onOpenChange={setIsBuyDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Buy {currentCoin?.name}</DialogTitle>
-                <DialogDescription>
-                  Set your margin and stop loss parameters
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="margin">Margin (%)</Label>
-                  <Input
-                    id="margin"
-                    type="number"
-                    value={margin}
-                    onChange={(e) => setMargin(e.target.value)}
-                    placeholder="Enter margin percentage"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="stopLoss">Stop Loss (%)</Label>
-                  <Input
-                    id="stopLoss"
-                    type="number"
-                    value={stopLoss}
-                    onChange={(e) => setStopLoss(e.target.value)}
-                    placeholder="Enter stop loss percentage"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsBuyDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleBuy}>
-                  Confirm Purchase
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </>
       )}
     </div>

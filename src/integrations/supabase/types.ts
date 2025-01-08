@@ -69,6 +69,44 @@ export type Database = {
         }
         Relationships: []
       }
+      coin_indicators: {
+        Row: {
+          coin_symbol: string
+          created_at: string | null
+          id: string
+          indicators: Json
+          sentiment: string
+          trade_view_id: string | null
+          user_response: string | null
+        }
+        Insert: {
+          coin_symbol: string
+          created_at?: string | null
+          id?: string
+          indicators: Json
+          sentiment: string
+          trade_view_id?: string | null
+          user_response?: string | null
+        }
+        Update: {
+          coin_symbol?: string
+          created_at?: string | null
+          id?: string
+          indicators?: Json
+          sentiment?: string
+          trade_view_id?: string | null
+          user_response?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coin_indicators_trade_view_id_fkey"
+            columns: ["trade_view_id"]
+            isOneToOne: false
+            referencedRelation: "trade_views"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prediction_trades: {
         Row: {
           amount: number
@@ -155,6 +193,30 @@ export type Database = {
           status?: Database["public"]["Enums"]["prediction_status"]
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      trade_views: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          status?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
