@@ -1,5 +1,3 @@
-project_id = "ofbypucaiibkpnfwzrlo"
-
 [functions.fetch-binance-whales]
 verify_jwt = true
 regions = ["southeast-asia"]

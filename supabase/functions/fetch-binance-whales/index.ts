@@ -6,160 +6,146 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const WHALE_THRESHOLD = 100000; // $100k USD threshold for whale trades
-
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Initializing Supabase client...');
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: {
+          headers: { Authorization: req.headers.get("Authorization")! },
+        },
+      }
     );
 
-    // Authenticate the user
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('No authorization header provided');
-      throw new Error('No authorization header');
-    }
-
-    console.log('Authenticating user...');
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
-      console.error('Authentication failed:', userError);
-      throw new Error('Unauthorized');
+      throw new Error("User not authenticated");
     }
 
-    console.log('Fetching API keys for user:', user.id);
     // Get user's API keys
     const { data: apiKeys, error: apiKeysError } = await supabaseClient
-      .from('api_keys')
-      .select('binance_api_key, binance_api_secret')
-      .eq('user_id', user.id)
+      .from("api_keys")
+      .select("binance_api_key, binance_api_secret")
+      .eq("user_id", user.id)
       .single();
 
     if (apiKeysError || !apiKeys) {
-      console.error('API keys not found:', apiKeysError);
-      throw new Error('API keys not found');
+      throw new Error("No API keys found");
     }
 
-    // Fetch exchange info from Binance
-    console.log('Fetching exchange info from Binance...');
-    const exchangeInfo = await fetch('https://api.binance.com/api/v3/exchangeInfo', {
-      headers: {
-        'X-MBX-APIKEY': apiKeys.binance_api_key,
-        'Accept': 'application/json',
-      }
-    });
-    
-    if (!exchangeInfo.ok) {
-      console.error('Failed to fetch exchange info:', await exchangeInfo.text());
-      throw new Error('Failed to fetch exchange info');
-    }
+    // Fetch isolated margin account details
+    const timestamp = Date.now();
+    const queryString = `timestamp=${timestamp}`;
+    const signature = await createHmac(apiKeys.binance_api_secret, queryString);
 
-    const exchangeData = await exchangeInfo.json();
-    console.log('Exchange info received, processing symbols...');
-    
-    // Get USDT trading pairs
-    const usdtPairs = exchangeData.symbols
-      .filter((s: any) => s.quoteAsset === 'USDT' && s.status === 'TRADING')
-      .map((s: any) => s.symbol);
+    console.log("Fetching isolated margin account details...");
 
-    console.log(`Found ${usdtPairs.length} USDT trading pairs`);
-
-    const whales: any[] = [];
-    
-    // Fetch recent trades for each pair
-    console.log('Fetching trades for USDT pairs...');
-    for (const symbol of usdtPairs.slice(0, 10)) { // Limit to 10 pairs for rate limiting
-      try {
-        console.log(`Fetching trades for ${symbol}...`);
-        const trades = await fetch(
-          `https://api.binance.com/api/v3/trades?symbol=${symbol}&limit=1000`,
-          {
-            headers: {
-              'X-MBX-APIKEY': apiKeys.binance_api_key,
-              'Accept': 'application/json',
-            },
-          }
-        );
-        
-        if (!trades.ok) {
-          console.error(`Failed to fetch trades for ${symbol}:`, await trades.text());
-          continue;
-        }
-
-        const tradeData = await trades.json();
-        console.log(`Received ${tradeData.length} trades for ${symbol}`);
-        
-        // Filter for whale trades
-        const whaleTrades = tradeData.filter((trade: any) => {
-          const value = parseFloat(trade.price) * parseFloat(trade.qty);
-          return value >= WHALE_THRESHOLD;
-        });
-
-        console.log(`Found ${whaleTrades.length} whale trades for ${symbol}`);
-
-        // Process and store whale trades
-        for (const trade of whaleTrades) {
-          const tradeValue = parseFloat(trade.price) * parseFloat(trade.qty);
-          
-          const { error: insertError } = await supabaseClient
-            .from('whale_trades')
-            .upsert({
-              user_id: user.id,
-              symbol: symbol,
-              amount: tradeValue,
-              price: parseFloat(trade.price),
-              trade_type: trade.isBuyerMaker ? 'buy' : 'sell',
-              timestamp: new Date(trade.time).toISOString(),
-            });
-
-          if (insertError) {
-            console.error('Error inserting whale trade:', insertError);
-          } else {
-            console.log(`Successfully inserted whale trade for ${symbol}`);
-          }
-        }
-
-        whales.push(...whaleTrades);
-      } catch (error) {
-        console.error(`Error fetching trades for ${symbol}:`, error);
-      }
-    }
-
-    console.log(`Completed processing whale trades. Total whales found: ${whales.length}`);
-    return new Response(
-      JSON.stringify({ success: true, whales }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
+    const marginResponse = await fetch(
+      `https://api.binance.com/sapi/v1/margin/isolated/account?${queryString}&signature=${signature}`,
+      {
+        headers: {
+          "X-MBX-APIKEY": apiKeys.binance_api_key,
+        },
       }
     );
+
+    if (!marginResponse.ok) {
+      throw new Error(`Binance API error: ${marginResponse.statusText}`);
+    }
+
+    const marginData = await marginResponse.json();
+    const whales = [];
+
+    // Fetch trades for each isolated margin pair
+    for (const asset of marginData.assets) {
+      const symbol = asset.symbol;
+      console.log(`Fetching trades for ${symbol}...`);
+
+      const tradeTimestamp = Date.now();
+      const tradeQueryString = `symbol=${symbol}&isIsolated=TRUE&timestamp=${tradeTimestamp}`;
+      const tradeSignature = await createHmac(apiKeys.binance_api_secret, tradeQueryString);
+
+      const tradesResponse = await fetch(
+        `https://api.binance.com/sapi/v1/margin/myTrades?${tradeQueryString}&signature=${tradeSignature}`,
+        {
+          headers: {
+            "X-MBX-APIKEY": apiKeys.binance_api_key,
+          },
+        }
+      );
+
+      if (!tradesResponse.ok) {
+        console.error(`Failed to fetch trades for ${symbol}: ${tradesResponse.statusText}`);
+        continue;
+      }
+
+      const trades = await tradesResponse.json();
+      
+      // Process and filter whale trades (e.g., large volume trades)
+      const whaleTrades = trades
+        .filter((trade: any) => parseFloat(trade.qty) * parseFloat(trade.price) > 100000) // Filter trades > $100k
+        .map((trade: any) => ({
+          user_id: user.id,
+          symbol: trade.symbol,
+          amount: parseFloat(trade.qty) * parseFloat(trade.price),
+          price: parseFloat(trade.price),
+          trade_type: trade.isBuyer ? 'buy' : 'sell',
+          timestamp: new Date(trade.time),
+        }));
+
+      whales.push(...whaleTrades);
+    }
+
+    // Store whale trades in the database
+    if (whales.length > 0) {
+      const { error: insertError } = await supabaseClient
+        .from('whale_trades')
+        .insert(whales);
+
+      if (insertError) {
+        console.error('Error inserting whale trades:', insertError);
+        throw insertError;
+      }
+    }
+
+    return new Response(JSON.stringify(whales), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
-    console.error('Error in fetch-binance-whales:', error);
+    console.error("Error in fetch-binance-whales:", error);
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-        details: error
-      }),
-      { 
-        status: 500,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        }
+        error: error.message,
+        details: error instanceof Error ? error.stack : undefined
+      }), 
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: error.message.includes("not authenticated") ? 401 : 500,
       }
     );
   }
 });
+
+async function createHmac(secret: string, message: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(message)
+  );
+  return Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
