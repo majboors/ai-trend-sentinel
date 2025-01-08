@@ -91,7 +91,7 @@ export default function ProfitPredictions() {
             exitPrice: currentPrice,
             amount: coinsAmount,
             profitLoss: potentialProfit,
-            type: potentialProfit > 0 ? 'BUY' : 'SELL'
+            type: potentialProfit > 0 ? 'buy' : 'sell'  // Changed to lowercase
           });
         }
 
@@ -128,7 +128,7 @@ export default function ProfitPredictions() {
     exitPrice: number;
     amount: number;
     profitLoss: number;
-    type: string;
+    type: 'buy' | 'sell';  // Added type definition
   }) => {
     try {
       console.log('Storing trade with values:', {
@@ -140,7 +140,7 @@ export default function ProfitPredictions() {
         amount,
         profitLoss,
         type,
-        status: 'open'  // Using lowercase 'open' to match the enum type
+        status: 'open'
       });
 
       const { error } = await supabase
@@ -154,7 +154,7 @@ export default function ProfitPredictions() {
           amount,
           profit_loss: profitLoss,
           type,
-          status: 'open'  // Using lowercase 'open' to match the enum type
+          status: 'open'
         });
 
       if (error) {
