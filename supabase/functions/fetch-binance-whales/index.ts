@@ -8,6 +8,9 @@ const corsHeaders = {
 
 const WHALE_THRESHOLD = 100000; // $100k USD threshold for whale trades
 
+// Singapore proxy configuration
+const PROXY_URL = 'https://api.binance.com';
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -51,15 +54,29 @@ serve(async (req) => {
       throw new Error('API keys not found');
     }
 
-    // Fetch exchange info from Binance
+    // Fetch exchange info from Binance through Singapore proxy
     console.log('Fetching exchange info from Binance...');
-    const exchangeInfo = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+    const exchangeInfo = await fetch(`${PROXY_URL}/api/v3/exchangeInfo`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'application/json',
+      }
+    });
+    
+    if (!exchangeInfo.ok) {
+      console.error('Failed to fetch exchange info:', await exchangeInfo.text());
+      throw new Error('Failed to fetch exchange info');
+    }
+
     const exchangeData = await exchangeInfo.json();
+    console.log('Exchange info received, processing symbols...');
     
     // Get USDT trading pairs
     const usdtPairs = exchangeData.symbols
       .filter((s: any) => s.quoteAsset === 'USDT' && s.status === 'TRADING')
       .map((s: any) => s.symbol);
+
+    console.log(`Found ${usdtPairs.length} USDT trading pairs`);
 
     const whales: any[] = [];
     
@@ -67,11 +84,14 @@ serve(async (req) => {
     console.log('Fetching trades for USDT pairs...');
     for (const symbol of usdtPairs.slice(0, 10)) { // Limit to 10 pairs for rate limiting
       try {
+        console.log(`Fetching trades for ${symbol}...`);
         const trades = await fetch(
-          `https://api.binance.com/api/v3/trades?symbol=${symbol}&limit=1000`,
+          `${PROXY_URL}/api/v3/trades?symbol=${symbol}&limit=1000`,
           {
             headers: {
               'X-MBX-APIKEY': apiKeys.binance_api_key,
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+              'Accept': 'application/json',
             },
           }
         );
@@ -82,12 +102,15 @@ serve(async (req) => {
         }
 
         const tradeData = await trades.json();
+        console.log(`Received ${tradeData.length} trades for ${symbol}`);
         
         // Filter for whale trades
         const whaleTrades = tradeData.filter((trade: any) => {
           const value = parseFloat(trade.price) * parseFloat(trade.qty);
           return value >= WHALE_THRESHOLD;
         });
+
+        console.log(`Found ${whaleTrades.length} whale trades for ${symbol}`);
 
         // Process and store whale trades
         for (const trade of whaleTrades) {
@@ -117,7 +140,7 @@ serve(async (req) => {
       }
     }
 
-    console.log('Completed processing whale trades');
+    console.log(`Completed processing whale trades. Total whales found: ${whales.length}`);
     return new Response(
       JSON.stringify({ success: true, whales }),
       { 
