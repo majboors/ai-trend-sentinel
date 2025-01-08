@@ -7,10 +7,32 @@ export interface CoinData {
   lastPrice: number;
   priceChangePercent: number;
   strategy: Strategy;
-  indicators?: {
+  volume?: number;
+  quoteVolume?: number;
+  indicators: {
     rsi: number;
     ma7: number;
     ma25: number;
     ma99: number;
   };
+  klines: Array<{
+    openTime: number;
+    open: string;
+    high: string;
+    low: string;
+    close: string;
+    volume: string;
+  }>;
+  recentTrades: Array<{
+    time: number;
+    price: string;
+    quantity: string;
+    isBuyerMaker: boolean;
+  }>;
+}
+
+export interface TradeViewState {
+  id: string | null;
+  currentIndex: number;
+  coins: CoinData[];
 }
