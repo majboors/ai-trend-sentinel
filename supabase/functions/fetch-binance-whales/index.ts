@@ -53,7 +53,7 @@ serve(async (req) => {
 
     console.log("Successfully retrieved API keys");
 
-    // First fetch isolated margin account details
+    // First fetch isolated margin account details - similar to margin_account = client.get_isolated_margin_account()
     const accountTimestamp = Date.now();
     const accountQueryString = `timestamp=${accountTimestamp}`;
     const accountSignature = await createHmac(apiKeys.binance_api_secret, accountQueryString);
@@ -76,17 +76,18 @@ serve(async (req) => {
     }
 
     const marginData = await marginResponse.json();
-    console.log("Successfully fetched margin account details");
+    console.log("Successfully fetched margin account details:", marginData);
 
-    const whales = [];
+    const allTrades = [];
 
-    // Fetch trades for each isolated margin pair
+    // Iterate over each trading pair - similar to for asset in margin_account['assets']
     for (const asset of marginData.assets) {
       const symbol = asset.symbol;
       console.log(`Fetching trades for ${symbol}...`);
 
+      // Similar to trades = client.get_margin_trades(symbol=symbol, isIsolated='TRUE')
       const tradeTimestamp = Date.now();
-      const tradeQueryString = `symbol=${symbol}&isIsolated=TRUE&limit=100&timestamp=${tradeTimestamp}`;
+      const tradeQueryString = `symbol=${symbol}&isIsolated=TRUE&timestamp=${tradeTimestamp}`;
       const tradeSignature = await createHmac(apiKeys.binance_api_secret, tradeQueryString);
 
       try {
@@ -107,33 +108,33 @@ serve(async (req) => {
         const trades = await tradesResponse.json();
         console.log(`Found ${trades.length} trades for ${symbol}`);
 
-        // Process and filter whale trades (trades > $100k)
-        const whaleTrades = trades
-          .filter((trade: any) => {
-            const tradeValue = parseFloat(trade.price) * parseFloat(trade.qty);
-            return tradeValue > 100000; // Filter trades > $100k
-          })
-          .map((trade: any) => ({
+        // Process each trade - similar to the Python print statement
+        const processedTrades = trades.map((trade: any) => {
+          const tradeValue = parseFloat(trade.price) * parseFloat(trade.qty);
+          return {
             user_id: user.id,
             symbol: trade.symbol,
-            amount: parseFloat(trade.price) * parseFloat(trade.qty),
+            amount: tradeValue,
             price: parseFloat(trade.price),
             trade_type: trade.isBuyer ? 'buy' : 'sell',
             timestamp: new Date(trade.time),
-          }));
+          };
+        });
 
-        whales.push(...whaleTrades);
+        // Only store trades over $100k
+        const whaleTrades = processedTrades.filter(trade => trade.amount > 100000);
+        allTrades.push(...whaleTrades);
       } catch (error) {
         console.error(`Error processing trades for ${symbol}:`, error);
       }
     }
 
     // Store whale trades in the database
-    if (whales.length > 0) {
-      console.log(`Storing ${whales.length} whale trades in database`);
+    if (allTrades.length > 0) {
+      console.log(`Storing ${allTrades.length} whale trades in database`);
       const { error: insertError } = await supabaseClient
         .from('whale_trades')
-        .insert(whales);
+        .insert(allTrades);
 
       if (insertError) {
         console.error('Error inserting whale trades:', insertError);
@@ -143,7 +144,7 @@ serve(async (req) => {
       console.log('No whale trades found');
     }
 
-    return new Response(JSON.stringify(whales), {
+    return new Response(JSON.stringify(allTrades), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
