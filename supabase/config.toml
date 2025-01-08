@@ -1,10 +1,10 @@
 project_id = "ofbypucaiibkpnfwzrlo"
 
-[functions.fetch-binance-spot]
-verify_jwt = true
+[api]
+enabled = true
+# Restrict the regions that your edge function can be invoked from
+regions = ["southeast-asia"] # This will make the function run in Singapore
 
-[functions.fetch-binance-margin]
-verify_jwt = true
-
+[functions]
 [functions.fetch-binance-whales]
 verify_jwt = true

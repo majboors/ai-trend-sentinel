@@ -8,9 +8,6 @@ const corsHeaders = {
 
 const WHALE_THRESHOLD = 100000; // $100k USD threshold for whale trades
 
-// Singapore proxy configuration
-const PROXY_URL = 'https://api.binance.com';
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -54,11 +51,11 @@ serve(async (req) => {
       throw new Error('API keys not found');
     }
 
-    // Fetch exchange info from Binance through Singapore proxy
+    // Fetch exchange info from Binance
     console.log('Fetching exchange info from Binance...');
-    const exchangeInfo = await fetch(`${PROXY_URL}/api/v3/exchangeInfo`, {
+    const exchangeInfo = await fetch('https://api.binance.com/api/v3/exchangeInfo', {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'X-MBX-APIKEY': apiKeys.binance_api_key,
         'Accept': 'application/json',
       }
     });
@@ -86,11 +83,10 @@ serve(async (req) => {
       try {
         console.log(`Fetching trades for ${symbol}...`);
         const trades = await fetch(
-          `${PROXY_URL}/api/v3/trades?symbol=${symbol}&limit=1000`,
+          `https://api.binance.com/api/v3/trades?symbol=${symbol}&limit=1000`,
           {
             headers: {
               'X-MBX-APIKEY': apiKeys.binance_api_key,
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
               'Accept': 'application/json',
             },
           }
