@@ -11,14 +11,13 @@ export function CoinSentimentView() {
   const [availableCoins, setAvailableCoins] = useState<string[]>([]);
   const [sentimentData, setSentimentData] = useState<SentimentData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [loadingCoins, setLoadingCoins] = useState(false);
   const { allCoinsData, loading: loadingAllCoins } = useAllCoinsSentiment();
   const { toast } = useToast();
 
+  // Fetch available coins first
   useEffect(() => {
     const fetchCoins = async () => {
       try {
-        setLoadingCoins(true);
         const response = await fetch('https://crypto.techrealm.pk/coin/search');
         if (!response.ok) {
           throw new Error('Failed to fetch coins');
@@ -35,14 +34,13 @@ export function CoinSentimentView() {
           description: "Failed to fetch available coins. Please try again later.",
           variant: "destructive",
         });
-      } finally {
-        setLoadingCoins(false);
       }
     };
 
     fetchCoins();
   }, [toast, selectedCoin]);
 
+  // Fetch sentiment data separately
   useEffect(() => {
     const fetchSentimentData = async () => {
       if (!selectedCoin) return;
@@ -76,19 +74,13 @@ export function CoinSentimentView() {
       <DashboardSection allCoinsData={allCoinsData} loading={loadingAllCoins} />
 
       {/* Coin Analysis Section - Show immediately */}
-      {loadingCoins ? (
-        <div className="flex items-center justify-center h-32">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : (
-        <CoinAnalysisSection
-          selectedCoin={selectedCoin}
-          setSelectedCoin={setSelectedCoin}
-          availableCoins={availableCoins}
-          sentimentData={sentimentData}
-          loading={loading}
-        />
-      )}
+      <CoinAnalysisSection
+        selectedCoin={selectedCoin}
+        setSelectedCoin={setSelectedCoin}
+        availableCoins={availableCoins}
+        sentimentData={sentimentData}
+        loading={loading}
+      />
     </div>
   );
 }
