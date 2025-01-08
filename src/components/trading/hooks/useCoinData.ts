@@ -68,16 +68,26 @@ export function useCoinData() {
             .filter((k: any) => k && k.close)
             .map((k: any) => parseFloat(k.close));
           
+          // Add default klines data if none exists
+          const defaultKline = {
+            openTime: Date.now(),
+            open: coin.lastPrice?.toString() || "0",
+            high: coin.lastPrice?.toString() || "0",
+            low: coin.lastPrice?.toString() || "0",
+            close: coin.lastPrice?.toString() || "0",
+            volume: "0"
+          };
+
           return {
             ...coin,
-            klines: klines.map((k: any) => ({
+            klines: klines.length > 0 ? klines.map((k: any) => ({
               openTime: k?.openTime || Date.now(),
               open: k?.open || "0",
               high: k?.high || "0",
               low: k?.low || "0",
               close: k?.close || "0",
               volume: k?.volume || "0"
-            })),
+            })) : [defaultKline],
             indicators: {
               positive: Math.random() * 100,
               neutral: Math.random() * 100,

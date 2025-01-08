@@ -18,12 +18,15 @@ interface CoinChartProps {
 }
 
 export function CoinChart({ coin }: CoinChartProps) {
-  // Check if klines data exists and is an array
-  if (!coin.klines || !Array.isArray(coin.klines) || coin.klines.length === 0) {
+  // Ensure we have valid klines data
+  const hasValidKlines = coin?.klines && Array.isArray(coin.klines) && coin.klines.length > 0;
+  
+  if (!hasValidKlines) {
+    console.log('No valid klines data found:', coin);
     return (
       <Card className="p-4">
         <div className="h-[400px] flex items-center justify-center text-muted-foreground">
-          No chart data available
+          Loading chart data...
         </div>
       </Card>
     );
@@ -38,10 +41,11 @@ export function CoinChart({ coin }: CoinChartProps) {
     }));
 
   if (chartData.length === 0) {
+    console.log('No valid chart data after processing:', coin.klines);
     return (
       <Card className="p-4">
         <div className="h-[400px] flex items-center justify-center text-muted-foreground">
-          No valid chart data available
+          Processing chart data...
         </div>
       </Card>
     );
