@@ -9,11 +9,13 @@ const corsHeaders = {
 const WHALE_THRESHOLD = 100000; // $100k USD threshold for whale trades
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('Initializing Supabase client...');
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -21,14 +23,22 @@ serve(async (req) => {
 
     // Authenticate the user
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error('No authorization header');
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      throw new Error('No authorization header');
+    }
 
+    console.log('Authenticating user...');
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
 
-    if (userError || !user) throw new Error('Unauthorized');
+    if (userError || !user) {
+      console.error('Authentication failed:', userError);
+      throw new Error('Unauthorized');
+    }
 
+    console.log('Fetching API keys for user:', user.id);
     // Get user's API keys
     const { data: apiKeys, error: apiKeysError } = await supabaseClient
       .from('api_keys')
@@ -36,9 +46,13 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .single();
 
-    if (apiKeysError || !apiKeys) throw new Error('API keys not found');
+    if (apiKeysError || !apiKeys) {
+      console.error('API keys not found:', apiKeysError);
+      throw new Error('API keys not found');
+    }
 
     // Fetch exchange info from Binance
+    console.log('Fetching exchange info from Binance...');
     const exchangeInfo = await fetch('https://api.binance.com/api/v3/exchangeInfo');
     const exchangeData = await exchangeInfo.json();
     
@@ -50,6 +64,7 @@ serve(async (req) => {
     const whales: any[] = [];
     
     // Fetch recent trades for each pair
+    console.log('Fetching trades for USDT pairs...');
     for (const symbol of usdtPairs.slice(0, 10)) { // Limit to 10 pairs for rate limiting
       try {
         const trades = await fetch(
@@ -61,6 +76,11 @@ serve(async (req) => {
           }
         );
         
+        if (!trades.ok) {
+          console.error(`Failed to fetch trades for ${symbol}:`, await trades.text());
+          continue;
+        }
+
         const tradeData = await trades.json();
         
         // Filter for whale trades
@@ -84,7 +104,11 @@ serve(async (req) => {
               timestamp: new Date(trade.time).toISOString(),
             });
 
-          if (insertError) console.error('Error inserting whale trade:', insertError);
+          if (insertError) {
+            console.error('Error inserting whale trade:', insertError);
+          } else {
+            console.log(`Successfully inserted whale trade for ${symbol}`);
+          }
         }
 
         whales.push(...whaleTrades);
@@ -93,17 +117,29 @@ serve(async (req) => {
       }
     }
 
+    console.log('Completed processing whale trades');
     return new Response(
       JSON.stringify({ success: true, whales }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
     );
   } catch (error) {
     console.error('Error in fetch-binance-whales:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        details: error
+      }),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        }
       }
     );
   }

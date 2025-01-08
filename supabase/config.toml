@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.fetch-binance-margin]
 verify_jwt = true
+
+[functions.fetch-binance-whales]
+verify_jwt = true
