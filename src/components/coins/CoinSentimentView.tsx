@@ -12,6 +12,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { VideoCard } from "./VideoCard";
 import { SentimentStats } from "./SentimentStats";
+import { SentimentOverviewCard } from "./dashboard/SentimentOverviewCard";
+import { TopCoinsCard } from "./dashboard/TopCoinsCard";
+import { SentimentTrendCard } from "./dashboard/SentimentTrendCard";
 import type { SentimentData } from "./types";
 
 type SentimentFilter = "all" | "buy" | "sell" | "others";
@@ -156,6 +159,29 @@ export function CoinSentimentView() {
         <SentimentStats loading={loading} stats={calculateSentiments()} />
       </div>
 
+      {/* Dashboard Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
+        <SentimentOverviewCard
+          data={sentimentData}
+          title="Overall Sentiment Distribution"
+        />
+        <TopCoinsCard
+          data={sentimentData}
+          title="Top Positive Sentiment Coins"
+          type="buy"
+        />
+        <TopCoinsCard
+          data={sentimentData}
+          title="Top Negative Sentiment Coins"
+          type="sell"
+        />
+        <SentimentTrendCard
+          data={sentimentData}
+          title="Sentiment Trends Over Time"
+        />
+      </div>
+
+      {/* Existing Video Cards */}
       {sentimentData && Object.entries(sentimentData.videos).map(([videoId, video]) => (
         <VideoCard 
           key={videoId} 
