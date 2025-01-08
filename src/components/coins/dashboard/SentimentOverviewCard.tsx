@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import type { SentimentData } from "../types";
+import { Loader2 } from "lucide-react";
 
 interface SentimentOverviewCardProps {
   data: { [key: string]: SentimentData } | null;
@@ -14,19 +15,46 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
     if (!data) return [];
     
     const sentiments = { buy: 0, sell: 0, others: 0 };
-    Object.values(data).forEach(coinData => {
-      Object.values(coinData.videos).forEach(video => {
-        video.comments.forEach(comment => {
-          sentiments[comment.indicator as keyof typeof sentiments]++;
-        });
+    
+    try {
+      Object.entries(data).forEach(([_, coinData]) => {
+        if (coinData && coinData.videos) {
+          Object.values(coinData.videos).forEach(video => {
+            if (video && video.comments) {
+              video.comments.forEach(comment => {
+                if (comment.indicator in sentiments) {
+                  sentiments[comment.indicator as keyof typeof sentiments]++;
+                }
+              });
+            }
+          });
+        }
       });
-    });
+    } catch (error) {
+      console.error('Error processing sentiment data:', error);
+      return [];
+    }
 
     return Object.entries(sentiments).map(([key, value]) => ({
       sentiment: key.charAt(0).toUpperCase() + key.slice(1),
       count: value,
     }));
   };
+
+  const chartData = processData();
+
+  if (!data) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={className}>
@@ -37,7 +65,7 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
         <div className="h-[300px]">
           <ChartContainer config={{}}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={processData()}>
+              <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="sentiment" />
                 <YAxis />

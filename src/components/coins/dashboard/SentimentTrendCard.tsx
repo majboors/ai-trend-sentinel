@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import type { SentimentData } from "../types";
+import { Loader2 } from "lucide-react";
 
 interface SentimentTrendCardProps {
   data: { [key: string]: SentimentData } | null;
@@ -15,23 +16,47 @@ export function SentimentTrendCard({ data, title, className }: SentimentTrendCar
     
     const timelineData: Record<string, { buy: number; sell: number; others: number }> = {};
     
-    Object.values(data).forEach(coinData => {
-      Object.values(coinData.videos).forEach(video => {
-        video.comments.forEach(comment => {
-          const date = new Date().toLocaleDateString();
-          if (!timelineData[date]) {
-            timelineData[date] = { buy: 0, sell: 0, others: 0 };
-          }
-          timelineData[date][comment.indicator as keyof typeof timelineData[string]]++;
-        });
+    try {
+      Object.entries(data).forEach(([_, coinData]) => {
+        if (coinData && coinData.videos) {
+          Object.values(coinData.videos).forEach(video => {
+            if (video && video.comments) {
+              video.comments.forEach(comment => {
+                const date = new Date().toLocaleDateString();
+                if (!timelineData[date]) {
+                  timelineData[date] = { buy: 0, sell: 0, others: 0 };
+                }
+                if (comment.indicator in timelineData[date]) {
+                  timelineData[date][comment.indicator as keyof typeof timelineData[string]]++;
+                }
+              });
+            }
+          });
+        }
       });
-    });
+    } catch (error) {
+      console.error('Error processing timeline data:', error);
+      return [];
+    }
 
     return Object.entries(timelineData).map(([date, counts]) => ({
       date,
       ...counts,
     }));
   };
+
+  if (!data) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={className}>

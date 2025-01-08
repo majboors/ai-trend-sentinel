@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import type { SentimentData } from "../types";
+import { Loader2 } from "lucide-react";
 
 interface TopCoinsCardProps {
   data: { [key: string]: SentimentData } | null;
@@ -15,19 +16,29 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
     if (!data) return [];
     
     const coinSentiments: Record<string, number> = {};
-    Object.entries(data).forEach(([coin, coinData]) => {
-      let sentimentCount = 0;
-      Object.values(coinData.videos).forEach(video => {
-        video.comments.forEach(comment => {
-          if (comment.indicator === type) {
-            sentimentCount++;
+    
+    try {
+      Object.entries(data).forEach(([coin, coinData]) => {
+        if (coinData && coinData.videos) {
+          let sentimentCount = 0;
+          Object.values(coinData.videos).forEach(video => {
+            if (video && video.comments) {
+              video.comments.forEach(comment => {
+                if (comment.indicator === type) {
+                  sentimentCount++;
+                }
+              });
+            }
+          });
+          if (sentimentCount > 0) {
+            coinSentiments[coin] = sentimentCount;
           }
-        });
+        }
       });
-      if (sentimentCount > 0) {
-        coinSentiments[coin] = sentimentCount;
-      }
-    });
+    } catch (error) {
+      console.error('Error processing coin sentiments:', error);
+      return [];
+    }
 
     return Object.entries(coinSentiments)
       .sort(([, a], [, b]) => b - a)
@@ -48,6 +59,19 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
         return "hsl(47.9 95.8% 53.1%)";
     }
   };
+
+  if (!data) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={className}>
