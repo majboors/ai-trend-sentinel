@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, TrendingUp, TrendingDown } from "lucide-react";
 import { MarketSentiment } from "@/components/dashboard/MarketSentiment";
 import { CoinChart } from "./CoinChart";
-import type { CoinData } from "./types";
+import type { CoinData, Strategy } from "./types";
 
 interface CoinAnalysisCardProps {
   coin: CoinData;
@@ -12,8 +12,7 @@ interface CoinAnalysisCardProps {
 }
 
 export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps) {
-  // Function to determine strategy based on sentiment
-  const determineStrategy = (sentimentData: any) => {
+  const determineStrategy = (sentimentData: any): Strategy => {
     if (!sentimentData || !Array.isArray(sentimentData)) {
       return coin.strategy;
     }
@@ -22,17 +21,36 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
     const positive = sentimentData.find(s => s.type === "Positive")?.value || 0;
     const negative = sentimentData.find(s => s.type === "Negative")?.value || 0;
 
+    // First priority: Check neutral sentiment
     if (neutral > 50) {
-      return "COIN IS DEAD" as const;
+      return "COIN IS DEAD";
     }
+    
+    // Second priority: Check positive sentiment
     if (positive > 20) {
-      return "buy" as const;
+      return "buy";
     }
+    
+    // Third priority: Check negative sentiment
     if (negative > 10) {
-      return "do not buy" as const;
+      return "do not buy";
     }
 
     return coin.strategy;
+  };
+
+  const getStrategyColor = (strategy: Strategy): string => {
+    switch (strategy) {
+      case "buy":
+        return "text-green-500";
+      case "do not buy":
+      case "sell":
+        return "text-red-500";
+      case "COIN IS DEAD":
+        return "text-yellow-500";
+      default:
+        return "text-yellow-500";
+    }
   };
 
   return (
@@ -76,15 +94,7 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
 
       <div className="space-y-3">
         <h3 className="font-semibold text-lg">Suggested Strategy</h3>
-        <p className={`text-lg font-bold ${
-          coin.strategy === "buy" 
-            ? "text-green-500" 
-            : coin.strategy === "do not buy" || coin.strategy === "sell"
-              ? "text-red-500" 
-              : coin.strategy === "COIN IS DEAD"
-                ? "text-yellow-500"
-                : "text-yellow-500"
-        }`}>
+        <p className={`text-lg font-bold ${getStrategyColor(coin.strategy)}`}>
           {coin.strategy.toUpperCase()}
         </p>
       </div>
