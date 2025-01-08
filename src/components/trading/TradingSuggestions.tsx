@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { MarketSentiment } from "@/components/dashboard/MarketSentiment";
 import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { sendTradeNotification } from "@/utils/notificationService";
 
 interface Coin {
   id: string;
@@ -85,13 +86,51 @@ export function TradingSuggestions() {
     }
   };
 
-  const handleBuy = () => {
-    toast({
-      title: "Purchase Successful",
-      description: `Bought ${currentCoin.name} with ${margin}% margin and ${stopLoss}% stop loss`,
-    });
-    setIsBuyDialogOpen(false);
-    handleNext();
+  const handleBuy = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "Please sign in to trade",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get or create prediction view
+      const { data: viewData } = await supabase
+        .from('prediction_views')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (viewData) {
+        // Send initial notification
+        sendTradeNotification(
+          currentCoin.symbol,
+          'UP',
+          parseFloat(margin),
+          viewData.name,
+          (parseFloat(margin) / 100) * currentCoin.currentPrice
+        );
+      }
+
+      toast({
+        title: "Purchase Successful",
+        description: `Bought ${currentCoin.name} with ${margin}% margin and ${stopLoss}% stop loss`,
+      });
+      setIsBuyDialogOpen(false);
+      handleNext();
+    } catch (error) {
+      console.error('Error handling trade:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process trade",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!started) {

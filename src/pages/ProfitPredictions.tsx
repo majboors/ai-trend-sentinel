@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ProfitLossCard } from "@/components/dashboard/ProfitLossCard";
 import { CombinedPerformanceChart } from "@/components/dashboard/CombinedPerformanceChart";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { sendTradeNotification } from "@/utils/notificationService";
 import {
   Table,
   TableBody,
@@ -81,18 +81,15 @@ export default function ProfitPredictions() {
         const potentialProfit = currentValue - initialInvestment;
         const profitPercentage = (potentialProfit / initialInvestment) * 100;
 
-        // Store trade if profit/loss is significant (more than 1%)
-        if (Math.abs(profitPercentage) > 1 && viewId && session.user) {
-          storeTrade({
-            viewId,
-            userId: session.user.id,
-            symbol: coin.symbol,
-            entryPrice: initialPrice,
-            exitPrice: currentPrice,
-            amount: coinsAmount,
-            profitLoss: potentialProfit,
-            type: potentialProfit > 0 ? 'buy' : 'sell'  // Changed to lowercase
-          });
+        // Send notification if price change is significant (more than 1%)
+        if (Math.abs(profitPercentage) > 1 && viewData) {
+          sendTradeNotification(
+            coin.symbol,
+            profitPercentage > 0 ? 'UP' : 'DOWN',
+            Math.abs(profitPercentage),
+            viewData.name,
+            potentialProfit
+          );
         }
 
         return {
