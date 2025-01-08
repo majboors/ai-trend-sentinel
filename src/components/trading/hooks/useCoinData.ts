@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { CoinData } from "../types";
+import type { CoinData, Coin } from "../types";
 
 function calculateMA(prices: number[], period: number): number {
   if (prices.length === 0) return 0;
@@ -33,7 +33,7 @@ function calculateRSI(prices: number[], period: number = 14): number {
 export function useCoinData() {
   return useQuery({
     queryKey: ['trading-coins'],
-    queryFn: async (): Promise<CoinData[]> => {
+    queryFn: async (): Promise<Coin[]> => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error('No authenticated session found');
@@ -46,7 +46,7 @@ export function useCoinData() {
           body: {
             includeKlines: true,
             interval: '1h',
-            limit: 100 // Increased to get more historical data
+            limit: 100
           }
         });
 
@@ -62,82 +62,33 @@ export function useCoinData() {
 
         console.log('Successfully fetched coin data:', response.data);
 
-        return response.data.map((coin: any) => {
-          // Process klines data
-          const klines = Array.isArray(coin.klines) ? coin.klines : [];
+        return response.data.map((coinData: CoinData): Coin => {
+          const klines = Array.isArray(coinData.klines) ? coinData.klines : [];
           const prices = klines
             .filter((k: any) => k && k.close)
             .map((k: any) => parseFloat(k.close));
 
-          console.log(`Processing ${coin.symbol} with ${prices.length} price points`);
-
-          // Generate historical data if needed
-          if (klines.length === 0) {
-            const basePrice = parseFloat(coin.lastPrice || "0");
-            const timestamps = Array.from({ length: 100 }, (_, i) => 
-              Date.now() - (99 - i) * 60 * 60 * 1000
-            );
-            
-            for (let i = 0; i < timestamps.length; i++) {
-              const trend = Math.sin(i / 10) * 0.02; // Creates a slight wave pattern
-              const noise = (Math.random() - 0.5) * 0.01; // Adds some randomness
-              const variation = trend + noise;
-              const historicalPrice = basePrice * (1 + variation);
-              
-              prices.push(historicalPrice);
-              klines.push({
-                openTime: timestamps[i],
-                open: historicalPrice.toString(),
-                high: (historicalPrice * 1.002).toString(),
-                low: (historicalPrice * 0.998).toString(),
-                close: historicalPrice.toString(),
-                volume: (coin.volume * (Math.random() * 0.5 + 0.75)).toString()
-              });
-            }
-          }
-
-          // Calculate indicators
           const rsi = calculateRSI(prices);
           const ma7 = calculateMA(prices, 7);
           const ma25 = calculateMA(prices, 25);
           const ma99 = calculateMA(prices, 99);
 
-          console.log(`${coin.symbol} indicators:`, { rsi, ma7, ma25, ma99 });
-
-          // Calculate MACD
-          const ema12 = calculateMA(prices, 12);
-          const ema26 = calculateMA(prices, 26);
-          const macd = ema12 - ema26;
-          const signal = calculateMA([macd], 9);
-          const histogram = macd - signal;
-
           return {
-            ...coin,
-            klines,
-            indicators: {
-              positive: rsi > 70 ? 100 : rsi > 50 ? 75 : 25,
+            ...coinData,
+            price: parseFloat(coinData.lastPrice),
+            priceChange: coinData.priceChangePercent,
+            analysis: generateAnalysis(coinData),
+            sentiment: {
               neutral: Math.abs(50 - rsi),
+              positive: rsi > 70 ? 100 : rsi > 50 ? 75 : 25,
               negative: rsi < 30 ? 100 : rsi < 50 ? 75 : 25,
-              rsi,
-              macd: {
-                macd,
-                signal,
-                histogram
-              },
-              ma: {
-                ma7,
-                ma25,
-                ma99
-              },
             },
-            strategy: determineStrategy(coin.priceChangePercent),
-            marketCap: coin.volume * parseFloat(coin.lastPrice || "0"),
-            recentTrades: Array.from({ length: 20 }, (_, i) => ({
-              time: Date.now() - i * 60000,
-              price: (parseFloat(coin.lastPrice || "0") + (Math.random() - 0.5) * 10).toString(),
-              quantity: (Math.random() * 100).toString(),
-              isBuyerMaker: Math.random() > 0.5,
-            })),
+            indicators: {
+              rsi,
+              ma7,
+              ma25,
+              ma99,
+            },
           };
         });
       } catch (error) {
@@ -149,8 +100,27 @@ export function useCoinData() {
   });
 }
 
-function determineStrategy(priceChangePercent: number): "buy" | "sell" | "hold" {
-  if (priceChangePercent > 2) return "buy";
-  if (priceChangePercent < -2) return "sell";
-  return "hold";
+function generateAnalysis(coin: CoinData): string {
+  const { rsi, ma7, ma25, ma99 } = coin.indicators;
+  let analysis = '';
+
+  if (rsi > 70) {
+    analysis += 'Overbought conditions. ';
+  } else if (rsi < 30) {
+    analysis += 'Oversold conditions. ';
+  }
+
+  if (ma7 > ma25) {
+    analysis += 'Short-term uptrend. ';
+  } else {
+    analysis += 'Short-term downtrend. ';
+  }
+
+  if (ma25 > ma99) {
+    analysis += 'Long-term bullish.';
+  } else {
+    analysis += 'Long-term bearish.';
+  }
+
+  return analysis;
 }
