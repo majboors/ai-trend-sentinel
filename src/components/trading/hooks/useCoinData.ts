@@ -52,11 +52,28 @@ export function useCoinData() {
         throw new Error(response.error.message);
       }
 
+      if (!response.data || !Array.isArray(response.data)) {
+        console.error('Invalid response data:', response.data);
+        throw new Error('Invalid response data from API');
+      }
+
       return response.data.map((coin: any) => {
-        const prices = coin.klines.map((k: any) => parseFloat(k.close));
+        // Ensure klines exists and is an array before processing
+        const klines = Array.isArray(coin.klines) ? coin.klines : [];
+        const prices = klines
+          .filter((k: any) => k && k.close)
+          .map((k: any) => parseFloat(k.close));
         
         return {
           ...coin,
+          klines: klines.map((k: any) => ({
+            openTime: k.openTime || Date.now(),
+            open: k.open || "0",
+            high: k.high || "0",
+            low: k.low || "0",
+            close: k.close || "0",
+            volume: k.volume || "0"
+          })),
           indicators: {
             positive: Math.random() * 100,
             neutral: Math.random() * 100,
@@ -77,7 +94,7 @@ export function useCoinData() {
           marketCap: Math.random() * 1000000000,
           recentTrades: Array.from({ length: 20 }, (_, i) => ({
             time: Date.now() - i * 60000,
-            price: (parseFloat(coin.lastPrice) + (Math.random() - 0.5) * 10).toString(),
+            price: (parseFloat(coin.lastPrice || "0") + (Math.random() - 0.5) * 10).toString(),
             quantity: (Math.random() * 100).toString(),
             isBuyerMaker: Math.random() > 0.5,
           })),
