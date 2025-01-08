@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 type PredictionView = Database['public']['Tables']['prediction_views']['Row'];
 type PredictionTrade = Database['public']['Tables']['prediction_trades']['Row'];
@@ -36,6 +36,7 @@ export default function ProfitPredictions() {
   const [view, setView] = useState<PredictionView | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: viewData } = useQuery({
     queryKey: ['prediction-view', viewId],
@@ -80,6 +81,20 @@ export default function ProfitPredictions() {
         const potentialProfit = currentValue - initialInvestment;
         const profitPercentage = (potentialProfit / initialInvestment) * 100;
 
+        // Store trade if profit/loss is significant (more than 1%)
+        if (Math.abs(profitPercentage) > 1 && viewId && session.user) {
+          storeTrade({
+            viewId,
+            userId: session.user.id,
+            symbol: coin.symbol,
+            entryPrice: initialPrice,
+            exitPrice: currentPrice,
+            amount: coinsAmount,
+            profitLoss: potentialProfit,
+            type: potentialProfit > 0 ? 'profit' : 'loss'
+          });
+        }
+
         return {
           symbol: coin.symbol,
           initialPrice,
@@ -92,7 +107,55 @@ export default function ProfitPredictions() {
       return profits.sort((a, b) => b.potentialProfit - a.potentialProfit);
     },
     enabled: !!viewData,
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
+
+  // Function to store trades in Supabase
+  const storeTrade = async ({
+    viewId,
+    userId,
+    symbol,
+    entryPrice,
+    exitPrice,
+    amount,
+    profitLoss,
+    type
+  }: {
+    viewId: string;
+    userId: string;
+    symbol: string;
+    entryPrice: number;
+    exitPrice: number;
+    amount: number;
+    profitLoss: number;
+    type: string;
+  }) => {
+    try {
+      const { error } = await supabase
+        .from('prediction_trades')
+        .insert({
+          view_id: viewId,
+          user_id: userId,
+          symbol,
+          entry_price: entryPrice,
+          exit_price: exitPrice,
+          amount,
+          profit_loss: profitLoss,
+          type,
+          status: 'completed'
+        });
+
+      if (error) {
+        console.error('Error storing trade:', error);
+        return;
+      }
+
+      // Invalidate queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['prediction-trades', viewId] });
+    } catch (error) {
+      console.error('Error storing trade:', error);
+    }
+  };
 
   useEffect(() => {
     if (!viewId) {
@@ -106,8 +169,10 @@ export default function ProfitPredictions() {
 
   if (!view || !viewId) return null;
 
-  const totalProfit = coinProfits.reduce((sum, coin) => sum + coin.potentialProfit, 0);
-  const averageProfitPercentage = coinProfits.reduce((sum, coin) => sum + coin.profitPercentage, 0) / coinProfits.length;
+  // Get top 10 most profitable coins
+  const top10Profits = coinProfits.slice(0, 10);
+  const totalProfit = top10Profits.reduce((sum, coin) => sum + coin.potentialProfit, 0);
+  const averageProfitPercentage = top10Profits.reduce((sum, coin) => sum + coin.profitPercentage, 0) / top10Profits.length;
 
   return (
     <SidebarProvider>
@@ -117,7 +182,7 @@ export default function ProfitPredictions() {
           <div className="container mx-auto max-w-7xl">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold">{view.name} - Profits Analysis</h1>
+                <h1 className="text-2xl md:text-3xl font-bold">{view.name} - Top 10 Profitable Coins</h1>
                 <p className="text-muted-foreground">
                   Started on {new Date(view.start_date).toLocaleDateString()}
                 </p>
@@ -138,14 +203,14 @@ export default function ProfitPredictions() {
                   percentage={0}
                 />
                 <ProfitLossCard
-                  title="Potential Total Profits"
+                  title="Top 10 Total Profits"
                   value={totalProfit}
                   percentage={averageProfitPercentage}
                 />
                 <ProfitLossCard
                   title="Profitable Coins"
                   value={coinProfits.filter(coin => coin.potentialProfit > 0).length}
-                  percentage={0}
+                  percentage={(coinProfits.filter(coin => coin.potentialProfit > 0).length / coinProfits.length) * 100}
                 />
               </div>
 
@@ -156,7 +221,7 @@ export default function ProfitPredictions() {
               />
 
               <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Coins Profit Analysis</h2>
+                <h2 className="text-xl font-semibold mb-4">Top 10 Most Profitable Coins</h2>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -169,7 +234,7 @@ export default function ProfitPredictions() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {coinProfits.map((coin) => (
+                      {top10Profits.map((coin) => (
                         <TableRow
                           key={coin.symbol}
                           className="cursor-pointer hover:bg-muted/50"
