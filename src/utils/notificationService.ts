@@ -10,8 +10,9 @@ interface QueuedNotification {
 let notificationQueue: QueuedNotification[] = [];
 let isProcessingQueue = false;
 let lastNotificationTime = 0;
-const RATE_LIMIT_WINDOW = 5000; // 5 seconds between notifications
+const RATE_LIMIT_WINDOW = 10000; // 10 seconds between notifications
 const MAX_RETRIES = 3;
+const MAX_QUEUE_SIZE = 100; // Prevent queue from growing too large
 
 const processQueue = async () => {
   if (isProcessingQueue || notificationQueue.length === 0) return;
@@ -27,6 +28,8 @@ const processQueue = async () => {
         lastNotificationTime = now;
       }
     }
+  } catch (error) {
+    console.error('Error processing notification queue:', error);
   } finally {
     isProcessingQueue = false;
     // Continue processing queue if there are more items
@@ -44,6 +47,9 @@ const sendNotification = async (notification: QueuedNotification, retryCount = 0
     const response = await fetch('https://ntfy.sh/Trading', {
       method: 'POST',
       body: message,
+      headers: {
+        'Content-Type': 'text/plain',
+      }
     });
 
     if (!response.ok) {
@@ -54,24 +60,30 @@ const sendNotification = async (notification: QueuedNotification, retryCount = 0
         error: errorData
       });
       
-      // Retry logic for failed requests
+      // Only retry on rate limit errors
       if (retryCount < MAX_RETRIES && response.status === 429) {
-        console.log(`Retrying notification (${retryCount + 1}/${MAX_RETRIES})...`);
+        const backoffTime = RATE_LIMIT_WINDOW * Math.pow(2, retryCount); // Exponential backoff
+        console.log(`Rate limited. Retrying in ${backoffTime/1000}s (${retryCount + 1}/${MAX_RETRIES})...`);
         setTimeout(() => {
-          sendNotification(notification, retryCount + 1);
-        }, RATE_LIMIT_WINDOW * (retryCount + 1));
+          void sendNotification(notification, retryCount + 1);
+        }, backoffTime);
         return;
       }
     } else {
-      console.log('Notification sent:', message);
+      console.log('Notification sent successfully:', {
+        coin,
+        direction,
+        percentage: percentage.toFixed(2)
+      });
     }
   } catch (error) {
     console.error('Failed to send notification:', error);
-    // Retry on network errors
+    // Retry on network errors with exponential backoff
     if (retryCount < MAX_RETRIES) {
+      const backoffTime = RATE_LIMIT_WINDOW * Math.pow(2, retryCount);
       setTimeout(() => {
-        sendNotification(notification, retryCount + 1);
-      }, RATE_LIMIT_WINDOW * (retryCount + 1));
+        void sendNotification(notification, retryCount + 1);
+      }, backoffTime);
     }
   }
 };
@@ -83,6 +95,12 @@ export const sendTradeNotification = async (
   tradingViewName: string,
   amount: number
 ) => {
+  // Prevent queue from growing too large
+  if (notificationQueue.length >= MAX_QUEUE_SIZE) {
+    console.warn('Notification queue is full. Skipping notification.');
+    return;
+  }
+  
   // Add notification to queue
   notificationQueue.push({
     coin,
@@ -93,5 +111,5 @@ export const sendTradeNotification = async (
   });
   
   // Start processing queue if not already processing
-  processQueue();
+  void processQueue();
 };
