@@ -105,18 +105,15 @@ export function useCoinData() {
           const ma25 = calculateMA(prices, 25);
           const ma99 = calculateMA(prices, 99);
 
-          // Ensure we have a valid sentiment value
-          const sentiment = determineSentiment(rsi);
-
           return {
             ...coinData,
             price: parseFloat(coinData.lastPrice),
             priceChange: coinData.priceChangePercent,
             analysis: generateAnalysis(coinData),
             sentiment: {
-              neutral: Math.abs(50 - rsi).toString(),  // Fixed: Convert to string
-              positive: (rsi > 70 ? 100 : rsi > 50 ? 75 : 25).toString(),  // Fixed: Convert to string
-              negative: (rsi < 30 ? 100 : rsi < 50 ? 75 : 25).toString()  // Fixed: Convert to string
+              neutral: Math.abs(50 - rsi),
+              positive: rsi > 70 ? 100 : rsi > 50 ? 75 : 25,
+              negative: rsi < 30 ? 100 : rsi < 50 ? 75 : 25
             },
             indicators: {
               rsi,
