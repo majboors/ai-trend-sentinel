@@ -11,6 +11,17 @@ export interface CoinData {
     positive: number;
     neutral: number;
     negative: number;
+    rsi: number;
+    macd: {
+      macd: number;
+      signal: number;
+      histogram: number;
+    };
+    ma: {
+      ma7: number;
+      ma25: number;
+      ma99: number;
+    };
   };
   strategy: "buy" | "sell" | "hold";
   klines: Array<{
@@ -20,6 +31,13 @@ export interface CoinData {
     low: string;
     close: string;
     volume: string;
+  }>;
+  marketCap: number;
+  recentTrades: Array<{
+    time: number;
+    price: string;
+    quantity: string;
+    isBuyerMaker: boolean;
   }>;
 }
 

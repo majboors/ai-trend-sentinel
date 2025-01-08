@@ -8,6 +8,9 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { VolumeChart } from "./charts/VolumeChart";
+import { IndicatorsChart } from "./charts/IndicatorsChart";
+import { RecentTradesChart } from "./charts/RecentTradesChart";
 import type { CoinData } from "./types";
 
 interface CoinChartProps {
@@ -15,9 +18,8 @@ interface CoinChartProps {
 }
 
 export function CoinChart({ coin }: CoinChartProps) {
-  // Transform and validate klines data
   const chartData = coin.klines
-    .filter(kline => kline && kline.openTime && kline.close && kline.volume)
+    .filter(kline => kline && kline.openTime && kline.close)
     .map((kline) => ({
       time: new Date(kline.openTime).toLocaleTimeString(),
       price: parseFloat(kline.close),
@@ -35,49 +37,38 @@ export function CoinChart({ coin }: CoinChartProps) {
   }
 
   return (
-    <Card className="p-4">
-      <div className="h-[400px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis 
-              dataKey="time"
-              tick={{ fontSize: 12 }}
-              interval="preserveStartEnd"
-            />
-            <YAxis 
-              yAxisId="price"
-              orientation="right"
-              domain={['auto', 'auto']}
-              tick={{ fontSize: 12 }}
-            />
-            <YAxis 
-              yAxisId="volume"
-              orientation="left"
-              domain={['auto', 'auto']}
-              tick={{ fontSize: 12 }}
-            />
-            <Tooltip />
-            <Line
-              yAxisId="price"
-              type="monotone"
-              dataKey="price"
-              stroke="#2563eb"
-              dot={false}
-              strokeWidth={2}
-            />
-            <Line
-              yAxisId="volume"
-              type="monotone"
-              dataKey="volume"
-              stroke="#9333ea"
-              dot={false}
-              strokeWidth={1}
-              opacity={0.5}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </Card>
+    <div className="space-y-4">
+      <Card className="p-4">
+        <h3 className="text-lg font-semibold mb-2">Price Chart</h3>
+        <div className="h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="time"
+                tick={{ fontSize: 12 }}
+                interval="preserveStartEnd"
+              />
+              <YAxis 
+                tick={{ fontSize: 12 }}
+                domain={['auto', 'auto']}
+              />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="price"
+                stroke="#2563eb"
+                dot={false}
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      <VolumeChart coin={coin} />
+      <IndicatorsChart coin={coin} />
+      <RecentTradesChart coin={coin} />
+    </div>
   );
 }
