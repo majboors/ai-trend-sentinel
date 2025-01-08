@@ -71,6 +71,7 @@ export function MarketSentiment() {
         setSentimentData(newSentimentData);
       } catch (error) {
         console.error('Error fetching sentiment data:', error);
+        // Reset to default data on error
         setSentimentData(defaultSentimentData);
       } finally {
         setLoading(false);
