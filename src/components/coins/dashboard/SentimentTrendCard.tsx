@@ -36,31 +36,17 @@ export function SentimentTrendCard({ data, title, className }: SentimentTrendCar
         }
       });
 
-      // Convert to percentages
       return Object.entries(timelineData).map(([date, counts]) => ({
         date,
-        buy: (counts.buy / counts.total) * 100,
-        sell: (counts.sell / counts.total) * 100,
-        others: (counts.others / counts.total) * 100
+        buy: counts.total > 0 ? (counts.buy / counts.total) * 100 : 0,
+        sell: counts.total > 0 ? (counts.sell / counts.total) * 100 : 0,
+        others: counts.total > 0 ? (counts.others / counts.total) * 100 : 0
       }));
     } catch (error) {
       console.error('Error processing timeline data:', error);
       return [];
     }
   };
-
-  if (!data) {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center h-[300px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </CardContent>
-      </Card>
-    );
-  }
 
   const chartData = processData();
   console.log('Sentiment Trends Data:', chartData);
@@ -71,7 +57,12 @@ export function SentimentTrendCard({ data, title, className }: SentimentTrendCar
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[300px] relative">
+          {!data ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : null}
           <ChartContainer config={{}}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>

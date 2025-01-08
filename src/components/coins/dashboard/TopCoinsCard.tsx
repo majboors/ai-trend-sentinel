@@ -18,7 +18,6 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
     const coinSentiments: Record<string, { count: number; total: number }> = {};
     
     try {
-      // First pass: count sentiments for each coin
       Object.entries(data).forEach(([coin, coinData]) => {
         if (coinData?.videos) {
           let sentimentCount = 0;
@@ -44,7 +43,6 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
         }
       });
 
-      // Convert to percentage and sort
       return Object.entries(coinSentiments)
         .map(([coin, { count, total }]) => ({
           coin: coin.length > 20 ? coin.substring(0, 20) + "..." : coin,
@@ -62,26 +60,13 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
   const getBarColor = () => {
     switch (type) {
       case "buy":
-        return "hsl(142.1 76.2% 36.3%)"; // Green
+        return "hsl(142.1 76.2% 36.3%)";
       case "sell":
-        return "hsl(346.8 77.2% 49.8%)"; // Red
+        return "hsl(346.8 77.2% 49.8%)";
       default:
-        return "hsl(47.9 95.8% 53.1%)"; // Yellow
+        return "hsl(47.9 95.8% 53.1%)";
     }
   };
-
-  if (!data) {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center h-[300px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </CardContent>
-      </Card>
-    );
-  }
 
   const chartData = processData();
   console.log(`Top ${type} Coins Data:`, chartData);
@@ -92,7 +77,12 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[300px] relative">
+          {!data ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : null}
           <ChartContainer config={{}}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical">

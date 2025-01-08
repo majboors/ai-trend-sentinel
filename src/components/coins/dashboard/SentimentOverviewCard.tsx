@@ -33,7 +33,6 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
         }
       });
 
-      // Convert to percentages
       return Object.entries(sentiments).map(([key, value]) => ({
         sentiment: key.charAt(0).toUpperCase() + key.slice(1),
         percentage: totalComments > 0 ? (value / totalComments) * 100 : 0,
@@ -45,19 +44,6 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
     }
   };
 
-  if (!data) {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center h-[300px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </CardContent>
-      </Card>
-    );
-  }
-
   const chartData = processData();
   console.log('Overall Market Sentiment Data:', chartData);
 
@@ -67,7 +53,12 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[300px] relative">
+          {!data ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : null}
           <ChartContainer config={{}}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
