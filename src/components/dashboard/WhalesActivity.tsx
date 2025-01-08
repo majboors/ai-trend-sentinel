@@ -31,7 +31,7 @@ export function WhalesActivity() {
           .from('whale_trades')
           .select('*')
           .order('timestamp', { ascending: false })
-          .limit(20); // Increased limit to show more trades
+          .limit(20);
 
         if (dbError) {
           console.error('Error fetching cached whale trades:', dbError);
@@ -40,7 +40,7 @@ export function WhalesActivity() {
 
         if (whaleData) {
           console.log('Found cached whale trades:', whaleData.length);
-          setWhales(whaleData as WhaleTrade[]);
+          setWhales(whaleData);
         }
 
         // Then fetch fresh data from Binance
@@ -85,7 +85,14 @@ export function WhalesActivity() {
         }, 
         payload => {
           console.log('Received new whale trade:', payload);
-          setWhales(current => [payload.new as WhaleTrade, ...current.slice(0, 19)]);
+          setWhales(current => {
+            const newTrade = payload.new as WhaleTrade;
+            // Check if trade already exists to prevent duplicates
+            if (!current.some(trade => trade.id === newTrade.id)) {
+              return [newTrade, ...current.slice(0, 19)];
+            }
+            return current;
+          });
         }
       )
       .subscribe();
@@ -138,7 +145,7 @@ export function WhalesActivity() {
           {whales.map((whale) => (
             <TableRow key={whale.id}>
               <TableCell className="font-mono">{whale.symbol}</TableCell>
-              <TableCell>${whale.price.toFixed(4)}</TableCell>
+              <TableCell>${whale.price.toFixed(2)}</TableCell>
               <TableCell className={`flex items-center gap-1 ${whale.trade_type === 'buy' ? 'text-green-500' : 'text-red-500'}`}>
                 {whale.trade_type === 'buy' ? (
                   <ArrowUpIcon className="h-4 w-4" />
