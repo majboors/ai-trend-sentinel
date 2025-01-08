@@ -1,24 +1,46 @@
-// Simple rate limiting using a token bucket algorithm
+// Queue implementation for notifications
+interface QueuedNotification {
+  coin: string;
+  direction: 'UP' | 'DOWN';
+  percentage: number;
+  tradingViewName: string;
+  amount: number;
+}
+
+let notificationQueue: QueuedNotification[] = [];
+let isProcessingQueue = false;
 let lastNotificationTime = 0;
-const RATE_LIMIT_WINDOW = 2000; // 2 seconds between notifications
+const RATE_LIMIT_WINDOW = 5000; // 5 seconds between notifications
+const MAX_RETRIES = 3;
 
-export const sendTradeNotification = async (
-  coin: string,
-  direction: 'UP' | 'DOWN',
-  percentage: number,
-  tradingViewName: string,
-  amount: number
-) => {
+const processQueue = async () => {
+  if (isProcessingQueue || notificationQueue.length === 0) return;
+  
+  isProcessingQueue = true;
   const now = Date.now();
-  if (now - lastNotificationTime < RATE_LIMIT_WINDOW) {
-    console.log('Rate limited: Skipping notification to prevent 429 error');
-    return;
+  
+  try {
+    if (now - lastNotificationTime >= RATE_LIMIT_WINDOW) {
+      const notification = notificationQueue.shift();
+      if (notification) {
+        await sendNotification(notification);
+        lastNotificationTime = now;
+      }
+    }
+  } finally {
+    isProcessingQueue = false;
+    // Continue processing queue if there are more items
+    if (notificationQueue.length > 0) {
+      setTimeout(processQueue, RATE_LIMIT_WINDOW);
+    }
   }
+};
 
+const sendNotification = async (notification: QueuedNotification, retryCount = 0) => {
+  const { coin, direction, percentage, tradingViewName, amount } = notification;
   const message = `ALERT ${coin} went ${direction} ${percentage.toFixed(2)}% your ${tradingViewName} would have ${direction === 'UP' ? 'made' : 'LOST'} you $${Math.abs(amount).toFixed(2)}`;
   
   try {
-    lastNotificationTime = now;
     const response = await fetch('https://ntfy.sh/Trading', {
       method: 'POST',
       body: message,
@@ -31,11 +53,45 @@ export const sendTradeNotification = async (
         statusText: response.statusText,
         error: errorData
       });
-      return;
+      
+      // Retry logic for failed requests
+      if (retryCount < MAX_RETRIES && response.status === 429) {
+        console.log(`Retrying notification (${retryCount + 1}/${MAX_RETRIES})...`);
+        setTimeout(() => {
+          sendNotification(notification, retryCount + 1);
+        }, RATE_LIMIT_WINDOW * (retryCount + 1));
+        return;
+      }
+    } else {
+      console.log('Notification sent:', message);
     }
-
-    console.log('Notification sent:', message);
   } catch (error) {
     console.error('Failed to send notification:', error);
+    // Retry on network errors
+    if (retryCount < MAX_RETRIES) {
+      setTimeout(() => {
+        sendNotification(notification, retryCount + 1);
+      }, RATE_LIMIT_WINDOW * (retryCount + 1));
+    }
   }
+};
+
+export const sendTradeNotification = async (
+  coin: string,
+  direction: 'UP' | 'DOWN',
+  percentage: number,
+  tradingViewName: string,
+  amount: number
+) => {
+  // Add notification to queue
+  notificationQueue.push({
+    coin,
+    direction,
+    percentage,
+    tradingViewName,
+    amount
+  });
+  
+  // Start processing queue if not already processing
+  processQueue();
 };
