@@ -1,25 +1,18 @@
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
 
-export interface VolatileTrade {
-  id: string;
-  user_id: string;
-  symbol: string;
-  entry_price: number;
-  exit_price?: number;
-  amount: number;
-  volatility: number;
-  status: 'open' | 'closed' | 'cancelled';
-  profit_loss?: number;
-  created_at?: string;
-  closed_at?: string;
-  high_price: number;
-  low_price: number;
-}
+type VolatileTradeRow = Database['public']['Tables']['volatile_trades']['Row'];
+type VolatileTradeInsert = Database['public']['Tables']['volatile_trades']['Insert'];
 
-export async function createVolatileTrade(trade: Omit<VolatileTrade, 'id' | 'status' | 'created_at'>): Promise<VolatileTrade> {
+export interface VolatileTrade extends VolatileTradeRow {}
+
+export async function createVolatileTrade(trade: Omit<VolatileTradeInsert, 'id' | 'status' | 'created_at'>): Promise<VolatileTrade> {
   const { data, error } = await supabase
     .from('volatile_trades')
-    .insert(trade)
+    .insert({
+      ...trade,
+      status: 'open',
+    })
     .select()
     .single();
 
