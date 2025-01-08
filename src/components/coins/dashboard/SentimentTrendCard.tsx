@@ -18,31 +18,31 @@ export function SentimentTrendCard({ data, title, className }: SentimentTrendCar
     
     try {
       Object.entries(data).forEach(([_, coinData]) => {
-        if (coinData && coinData.videos) {
+        if (coinData?.videos) {
           Object.values(coinData.videos).forEach(video => {
-            if (video && video.comments) {
+            if (video?.comments) {
               video.comments.forEach(comment => {
                 const date = new Date().toLocaleDateString();
                 if (!timelineData[date]) {
                   timelineData[date] = { buy: 0, sell: 0, others: 0 };
                 }
-                if (comment.indicator in timelineData[date]) {
-                  timelineData[date][comment.indicator as keyof typeof timelineData[string]]++;
-                }
+                if (comment.indicator === 'buy') timelineData[date].buy++;
+                else if (comment.indicator === 'sell') timelineData[date].sell++;
+                else timelineData[date].others++;
               });
             }
           });
         }
       });
+
+      return Object.entries(timelineData).map(([date, counts]) => ({
+        date,
+        ...counts,
+      }));
     } catch (error) {
       console.error('Error processing timeline data:', error);
       return [];
     }
-
-    return Object.entries(timelineData).map(([date, counts]) => ({
-      date,
-      ...counts,
-    }));
   };
 
   if (!data) {

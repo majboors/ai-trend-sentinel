@@ -19,10 +19,10 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
     
     try {
       Object.entries(data).forEach(([coin, coinData]) => {
-        if (coinData && coinData.videos) {
+        if (coinData?.videos) {
           let sentimentCount = 0;
           Object.values(coinData.videos).forEach(video => {
-            if (video && video.comments) {
+            if (video?.comments) {
               video.comments.forEach(comment => {
                 if (comment.indicator === type) {
                   sentimentCount++;
@@ -35,18 +35,18 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
           }
         }
       });
+
+      return Object.entries(coinSentiments)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+        .map(([coin, count]) => ({
+          coin: coin.length > 20 ? coin.substring(0, 20) + "..." : coin,
+          count,
+        }));
     } catch (error) {
       console.error('Error processing coin sentiments:', error);
       return [];
     }
-
-    return Object.entries(coinSentiments)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 10)
-      .map(([coin, count]) => ({
-        coin: coin.length > 20 ? coin.substring(0, 20) + "..." : coin,
-        count,
-      }));
   };
 
   const getBarColor = () => {
@@ -73,6 +73,8 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
     );
   }
 
+  const chartData = processData();
+
   return (
     <Card className={className}>
       <CardHeader>
@@ -82,7 +84,7 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
         <div className="h-[300px]">
           <ChartContainer config={{}}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={processData()} layout="vertical">
+              <BarChart data={chartData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
                 <YAxis dataKey="coin" type="category" width={150} />

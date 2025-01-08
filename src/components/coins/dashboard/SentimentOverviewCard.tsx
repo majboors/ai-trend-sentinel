@@ -18,27 +18,27 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
     
     try {
       Object.entries(data).forEach(([_, coinData]) => {
-        if (coinData && coinData.videos) {
+        if (coinData?.videos) {
           Object.values(coinData.videos).forEach(video => {
-            if (video && video.comments) {
+            if (video?.comments) {
               video.comments.forEach(comment => {
-                if (comment.indicator in sentiments) {
-                  sentiments[comment.indicator as keyof typeof sentiments]++;
-                }
+                if (comment.indicator === 'buy') sentiments.buy++;
+                else if (comment.indicator === 'sell') sentiments.sell++;
+                else sentiments.others++;
               });
             }
           });
         }
       });
+
+      return Object.entries(sentiments).map(([key, value]) => ({
+        sentiment: key.charAt(0).toUpperCase() + key.slice(1),
+        count: value,
+      }));
     } catch (error) {
       console.error('Error processing sentiment data:', error);
       return [];
     }
-
-    return Object.entries(sentiments).map(([key, value]) => ({
-      sentiment: key.charAt(0).toUpperCase() + key.slice(1),
-      count: value,
-    }));
   };
 
   const chartData = processData();
