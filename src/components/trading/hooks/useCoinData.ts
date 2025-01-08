@@ -30,6 +30,31 @@ function calculateRSI(prices: number[], period: number = 14): number {
   return 100 - (100 / (1 + rs));
 }
 
+function generateAnalysis(coin: CoinData): string {
+  const { rsi, ma7, ma25, ma99 } = coin.indicators;
+  let analysis = '';
+
+  if (rsi > 70) {
+    analysis += 'Overbought conditions. ';
+  } else if (rsi < 30) {
+    analysis += 'Oversold conditions. ';
+  }
+
+  if (ma7 > ma25) {
+    analysis += 'Short-term uptrend. ';
+  } else {
+    analysis += 'Short-term downtrend. ';
+  }
+
+  if (ma25 > ma99) {
+    analysis += 'Long-term bullish.';
+  } else {
+    analysis += 'Long-term bearish.';
+  }
+
+  return analysis;
+}
+
 export function useCoinData() {
   return useQuery({
     queryKey: ['trading-coins'],
@@ -46,7 +71,7 @@ export function useCoinData() {
           body: {
             includeKlines: true,
             interval: '1h',
-            limit: 100
+            limit: '100' // Fixed: Convert number to string
           }
         });
 
@@ -98,29 +123,4 @@ export function useCoinData() {
     },
     refetchInterval: 30000,
   });
-}
-
-function generateAnalysis(coin: CoinData): string {
-  const { rsi, ma7, ma25, ma99 } = coin.indicators;
-  let analysis = '';
-
-  if (rsi > 70) {
-    analysis += 'Overbought conditions. ';
-  } else if (rsi < 30) {
-    analysis += 'Oversold conditions. ';
-  }
-
-  if (ma7 > ma25) {
-    analysis += 'Short-term uptrend. ';
-  } else {
-    analysis += 'Short-term downtrend. ';
-  }
-
-  if (ma25 > ma99) {
-    analysis += 'Long-term bullish.';
-  } else {
-    analysis += 'Long-term bearish.';
-  }
-
-  return analysis;
 }
