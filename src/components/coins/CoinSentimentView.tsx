@@ -37,7 +37,7 @@ export function CoinSentimentView() {
     const fetchCoins = async () => {
       try {
         setLoadingCoins(true);
-        const response = await fetch('http://45.90.122.221:5000/coin/search');
+        const response = await fetch('https://crypto.techrealm.pk/coin/search');
         if (!response.ok) {
           throw new Error('Failed to fetch coins');
         }
