@@ -20,6 +20,7 @@ export function MarketSentiment() {
   const [availableCoins, setAvailableCoins] = useState<string[]>([]);
   const [sentimentData, setSentimentData] = useState<SentimentData[]>(defaultSentimentData);
   const [loading, setLoading] = useState(false);
+  const [coinsLoading, setCoinsLoading] = useState(true);
 
   // Fetch available coins
   useEffect(() => {
@@ -35,6 +36,8 @@ export function MarketSentiment() {
         }
       } catch (error) {
         console.error('Error fetching coins:', error);
+      } finally {
+        setCoinsLoading(false);
       }
     };
 
@@ -74,6 +77,7 @@ export function MarketSentiment() {
       fetchSentimentData();
     } else {
       setSentimentData(defaultSentimentData);
+      setLoading(false);
     }
   }, [selectedCoin]);
 
@@ -81,9 +85,9 @@ export function MarketSentiment() {
     <Card className="glass-card p-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-sm font-medium text-muted-foreground">Market Sentiment</h3>
-        <Select value={selectedCoin} onValueChange={setSelectedCoin}>
+        <Select value={selectedCoin} onValueChange={setSelectedCoin} disabled={coinsLoading}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select coin" />
+            <SelectValue placeholder={coinsLoading ? "Loading coins..." : "Select coin"} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="">Overall Market</SelectItem>
@@ -104,7 +108,7 @@ export function MarketSentiment() {
             </div>
             <Progress 
               value={sentiment.value} 
-              className={`${sentiment.color} ${loading ? 'opacity-50' : ''}`} 
+              className={`${sentiment.color} ${loading && selectedCoin ? 'opacity-50' : ''}`} 
             />
           </div>
         ))}
