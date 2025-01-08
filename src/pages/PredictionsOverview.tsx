@@ -24,16 +24,41 @@ type PredictionTrade = Database['public']['Tables']['prediction_trades']['Row'];
 export default function PredictionsOverview() {
   const [views, setViews] = useState<PredictionView[]>([]);
   const [trades, setTrades] = useState<PredictionTrade[]>([]);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchData();
+
+    // Subscribe to real-time updates
+    const viewsChannel = supabase
+      .channel('prediction_views_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'prediction_views'
+        },
+        () => {
+          console.log('Views updated, refreshing data...');
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(viewsChannel);
+    };
   }, []);
 
   const fetchData = async () => {
     try {
+      setLoading(true);
+      console.log('Fetching prediction data...');
+
       const [viewsResponse, tradesResponse] = await Promise.all([
         supabase
           .from('prediction_views')
@@ -48,10 +73,20 @@ export default function PredictionsOverview() {
       if (viewsResponse.error) throw viewsResponse.error;
       if (tradesResponse.error) throw tradesResponse.error;
 
+      console.log('Fetched views:', viewsResponse.data);
+      console.log('Fetched trades:', tradesResponse.data);
+
       setViews(viewsResponse.data || []);
       setTrades(tradesResponse.data || []);
+
+      // Set the active view to the first active view found
+      const activeView = viewsResponse.data?.find(view => view.status === 'active');
+      if (activeView) {
+        console.log('Setting active view:', activeView.id);
+        setActiveViewId(activeView.id);
+      }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching prediction data:', error);
       toast({
         title: "Error",
         description: "Failed to fetch prediction data",
@@ -67,6 +102,29 @@ export default function PredictionsOverview() {
   const totalLosses = calculateTotalLosses(trades);
   const profitPercentage = calculateProfitPercentage(trades, totalInitialAmount);
   const lossPercentage = calculateLossPercentage(trades, totalInitialAmount);
+
+  if (loading) {
+    return (
+      <SidebarProvider>
+        <div className="flex h-screen">
+          <DashboardSidebar />
+          <main className="flex-1 p-4 md:p-8">
+            <div className="container mx-auto max-w-7xl">
+              <div className="animate-pulse space-y-4">
+                <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="h-32 bg-gray-200 rounded"></div>
+                  <div className="h-32 bg-gray-200 rounded"></div>
+                  <div className="h-32 bg-gray-200 rounded"></div>
+                </div>
+                <div className="h-64 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -103,7 +161,18 @@ export default function PredictionsOverview() {
                 />
               </div>
 
-              <CombinedPerformanceChart title="Overall Performance" />
+              {activeViewId ? (
+                <CombinedPerformanceChart 
+                  title="Overall Performance" 
+                  viewId={activeViewId}
+                />
+              ) : (
+                <Card className="p-6">
+                  <p className="text-center text-muted-foreground">
+                    No active prediction view found. Create one in settings to start tracking performance.
+                  </p>
+                </Card>
+              )}
 
               <Card className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Active Predictions</h2>
