@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2 } from "lucide-react";
 import { DashboardSection } from "./dashboard/DashboardSection";
 import { CoinAnalysisSection } from "./analysis/CoinAnalysisSection";
 import { useAllCoinsSentiment } from "@/hooks/useAllCoinsSentiment";
 import type { SentimentData } from "./types";
+
+const RETRY_DELAY = 5000; // 5 seconds delay before retry
+const MAX_RETRIES = 2;
 
 export function CoinSentimentView() {
   const [selectedCoin, setSelectedCoin] = useState<string>("");
@@ -14,8 +16,10 @@ export function CoinSentimentView() {
   const { allCoinsData, loading: loadingAllCoins } = useAllCoinsSentiment();
   const { toast } = useToast();
 
-  // Fetch available coins first
+  // Fetch available coins first with retry logic
   useEffect(() => {
+    let retryCount = 0;
+    
     const fetchCoins = async () => {
       try {
         const response = await fetch('https://crypto.techrealm.pk/coin/search');
@@ -23,28 +27,32 @@ export function CoinSentimentView() {
           throw new Error('Failed to fetch coins');
         }
         const data = await response.json();
-        setAvailableCoins(data.coins);
-        if (data.coins.length > 0 && !selectedCoin) {
-          setSelectedCoin(data.coins[0]);
-        }
+        setAvailableCoins(data.coins || []);
       } catch (error) {
         console.error('Error fetching coins:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch available coins. Please try again later.",
-          variant: "destructive",
-        });
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          setTimeout(fetchCoins, RETRY_DELAY);
+        } else {
+          toast({
+            title: "Warning",
+            description: "Could not load available coins. Please try again later.",
+            variant: "destructive",
+          });
+        }
       }
     };
 
     fetchCoins();
-  }, [toast, selectedCoin]);
+  }, [toast]);
 
-  // Fetch sentiment data separately
+  // Fetch sentiment data separately with retry logic
   useEffect(() => {
+    if (!selectedCoin) return;
+    
+    let retryCount = 0;
+    
     const fetchSentimentData = async () => {
-      if (!selectedCoin) return;
-      
       try {
         setLoading(true);
         const response = await fetch(`https://crypto.techrealm.pk/coin/${selectedCoin}`);
@@ -55,11 +63,17 @@ export function CoinSentimentView() {
         setSentimentData(data);
       } catch (error) {
         console.error('Error fetching sentiment data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch sentiment data. Please try again later.",
-          variant: "destructive",
-        });
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          setTimeout(fetchSentimentData, RETRY_DELAY);
+        } else {
+          toast({
+            title: "Warning",
+            description: "Could not load sentiment data. Please try again later.",
+            variant: "destructive",
+          });
+          setSentimentData(null);
+        }
       } finally {
         setLoading(false);
       }

@@ -6,12 +6,17 @@ interface AllCoinsData {
   [key: string]: SentimentData;
 }
 
+const RETRY_DELAY = 5000; // 5 seconds delay before retry
+const MAX_RETRIES = 2;
+
 export function useAllCoinsSentiment() {
   const [loading, setLoading] = useState(true);
   const [allCoinsData, setAllCoinsData] = useState<AllCoinsData>({});
   const { toast } = useToast();
 
   useEffect(() => {
+    let retryCount = 0;
+
     const fetchAllCoinsData = async () => {
       try {
         setLoading(true);
@@ -32,6 +37,7 @@ export function useAllCoinsSentiment() {
               }
             } catch (error) {
               console.error(`Error fetching data for ${coin}:`, error);
+              // Skip failed coins silently
             }
           })
         );
@@ -39,11 +45,16 @@ export function useAllCoinsSentiment() {
         setAllCoinsData(allData);
       } catch (error) {
         console.error('Error fetching all coins data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch coins data. Please try again later.",
-          variant: "destructive",
-        });
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          setTimeout(fetchAllCoinsData, RETRY_DELAY);
+        } else {
+          toast({
+            title: "Warning",
+            description: "Could not load all coins data. Some information may be missing.",
+            variant: "destructive",
+          });
+        }
       } finally {
         setLoading(false);
       }
