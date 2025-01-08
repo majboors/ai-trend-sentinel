@@ -55,10 +55,15 @@ serve(async (req) => {
 
     // Process spot trades for all trading pairs
     const spotAssets = await fetchSpotAccount(apiKeys.binance_api_key, apiKeys.binance_api_secret);
+    console.log(`Found ${spotAssets.length} spot assets`);
+    
     for (const asset of spotAssets) {
       if (parseFloat(asset.free) > 0 || parseFloat(asset.locked) > 0) {
-        const pairs = tradingPairs.filter(pair => pair.startsWith(asset.asset));
-        for (const pair of pairs) {
+        // Find all pairs that start with this asset
+        const relevantPairs = tradingPairs.filter(pair => pair.startsWith(asset.asset));
+        console.log(`Processing ${relevantPairs.length} pairs for spot asset ${asset.asset}`);
+        
+        for (const pair of relevantPairs) {
           try {
             console.log(`Fetching spot trades for ${pair}...`);
             const trades = await fetchTradesForSymbol(
@@ -78,6 +83,8 @@ serve(async (req) => {
 
     // Process margin trades
     const marginAssets = await fetchMarginAccount(apiKeys.binance_api_key, apiKeys.binance_api_secret);
+    console.log(`Found ${marginAssets.length} margin assets`);
+    
     for (const asset of marginAssets) {
       try {
         console.log(`Fetching margin trades for ${asset.symbol}...`);
@@ -96,10 +103,15 @@ serve(async (req) => {
 
     // Process cross margin trades
     const crossMarginAssets = await fetchCrossMarginAccount(apiKeys.binance_api_key, apiKeys.binance_api_secret);
+    console.log(`Found ${crossMarginAssets.length} cross margin assets`);
+    
     for (const asset of crossMarginAssets) {
       if (parseFloat(asset.free) > 0 || parseFloat(asset.locked) > 0) {
-        const pairs = tradingPairs.filter(pair => pair.startsWith(asset.asset));
-        for (const pair of pairs) {
+        // Find all pairs that start with this asset
+        const relevantPairs = tradingPairs.filter(pair => pair.startsWith(asset.asset));
+        console.log(`Processing ${relevantPairs.length} pairs for cross margin asset ${asset.asset}`);
+        
+        for (const pair of relevantPairs) {
           try {
             console.log(`Fetching cross margin trades for ${pair}...`);
             const trades = await fetchTradesForSymbol(
