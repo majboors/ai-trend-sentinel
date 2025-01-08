@@ -11,7 +11,7 @@ export function CoinSentimentView() {
   const [availableCoins, setAvailableCoins] = useState<string[]>([]);
   const [sentimentData, setSentimentData] = useState<SentimentData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [loadingCoins, setLoadingCoins] = useState(true);
+  const [loadingCoins, setLoadingCoins] = useState(false);
   const { allCoinsData, loading: loadingAllCoins } = useAllCoinsSentiment();
   const { toast } = useToast();
 
@@ -70,27 +70,25 @@ export function CoinSentimentView() {
     fetchSentimentData();
   }, [selectedCoin, toast]);
 
-  if (loadingCoins) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {/* Overview Dashboard - Always show with loading state if needed */}
+      {/* Dashboard Section - Show loading state */}
       <DashboardSection allCoinsData={allCoinsData} loading={loadingAllCoins} />
 
-      {/* Individual Coin Analysis - Show immediately after coins are loaded */}
-      <CoinAnalysisSection
-        selectedCoin={selectedCoin}
-        setSelectedCoin={setSelectedCoin}
-        availableCoins={availableCoins}
-        sentimentData={sentimentData}
-        loading={loading}
-      />
+      {/* Coin Analysis Section - Show immediately */}
+      {loadingCoins ? (
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <CoinAnalysisSection
+          selectedCoin={selectedCoin}
+          setSelectedCoin={setSelectedCoin}
+          availableCoins={availableCoins}
+          sentimentData={sentimentData}
+          loading={loading}
+        />
+      )}
     </div>
   );
 }
