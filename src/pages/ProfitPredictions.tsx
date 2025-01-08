@@ -131,6 +131,17 @@ export default function ProfitPredictions() {
     type: string;
   }) => {
     try {
+      console.log('Storing trade with values:', {
+        viewId,
+        userId,
+        symbol,
+        entryPrice,
+        exitPrice,
+        amount,
+        profitLoss,
+        type
+      });
+
       const { error } = await supabase
         .from('prediction_trades')
         .insert({
@@ -142,7 +153,7 @@ export default function ProfitPredictions() {
           amount,
           profit_loss: profitLoss,
           type,
-          status: 'OPEN'
+          status: 'OPEN' // Ensuring status is uppercase to match the constraint
         });
 
       if (error) {
