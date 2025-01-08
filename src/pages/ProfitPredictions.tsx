@@ -9,6 +9,7 @@ import { ProfitLossCard } from "@/components/dashboard/ProfitLossCard";
 import { CombinedPerformanceChart } from "@/components/dashboard/CombinedPerformanceChart";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTradeNotification } from "@/utils/notificationService";
+import type { Database } from "@/integrations/supabase/types";
 import {
   Table,
   TableBody,

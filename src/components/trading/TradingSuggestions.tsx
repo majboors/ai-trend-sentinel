@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CoinVolatileView } from "@/components/coins/CoinVolatileView";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
   SelectContent,
