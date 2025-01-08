@@ -62,50 +62,72 @@ export function useCoinData() {
         console.log('Successfully fetched coin data:', response.data);
 
         return response.data.map((coin: any) => {
-          // Ensure klines exists and is an array before processing
+          // Process klines data
           const klines = Array.isArray(coin.klines) ? coin.klines : [];
           const prices = klines
             .filter((k: any) => k && k.close)
             .map((k: any) => parseFloat(k.close));
-          
-          // Add default klines data if none exists
-          const defaultKline = {
-            openTime: Date.now(),
-            open: coin.lastPrice?.toString() || "0",
-            high: coin.lastPrice?.toString() || "0",
-            low: coin.lastPrice?.toString() || "0",
-            close: coin.lastPrice?.toString() || "0",
-            volume: "0"
-          };
+
+          // Calculate indicators using actual price data
+          const rsi = calculateRSI(prices);
+          const ma7 = calculateMA(prices, 7);
+          const ma25 = calculateMA(prices, 25);
+          const ma99 = calculateMA(prices, 99);
+
+          // Process MACD (12, 26, 9)
+          const ema12 = calculateMA(prices, 12);
+          const ema26 = calculateMA(prices, 26);
+          const macd = ema12 - ema26;
+          const signal = calculateMA([macd], 9);
+          const histogram = macd - signal;
+
+          // Create processed klines with proper data types
+          const processedKlines = klines.map((k: any) => ({
+            openTime: k?.openTime || Date.now(),
+            open: k?.open || coin.lastPrice?.toString() || "0",
+            high: k?.high || coin.lastPrice?.toString() || "0",
+            low: k?.low || coin.lastPrice?.toString() || "0",
+            close: k?.close || coin.lastPrice?.toString() || "0",
+            volume: k?.volume || "0"
+          }));
+
+          // If no klines data, create a default entry with current price
+          if (processedKlines.length === 0) {
+            const timestamps = Array.from({ length: 24 }, (_, i) => 
+              Date.now() - (23 - i) * 60 * 60 * 1000
+            );
+            
+            processedKlines.push(...timestamps.map(time => ({
+              openTime: time,
+              open: coin.lastPrice?.toString() || "0",
+              high: coin.lastPrice?.toString() || "0",
+              low: coin.lastPrice?.toString() || "0",
+              close: coin.lastPrice?.toString() || "0",
+              volume: coin.volume?.toString() || "0"
+            })));
+          }
 
           return {
             ...coin,
-            klines: klines.length > 0 ? klines.map((k: any) => ({
-              openTime: k?.openTime || Date.now(),
-              open: k?.open || "0",
-              high: k?.high || "0",
-              low: k?.low || "0",
-              close: k?.close || "0",
-              volume: k?.volume || "0"
-            })) : [defaultKline],
+            klines: processedKlines,
             indicators: {
-              positive: Math.random() * 100,
-              neutral: Math.random() * 100,
-              negative: Math.random() * 100,
-              rsi: calculateRSI(prices),
+              positive: rsi > 70 ? 100 : rsi > 50 ? 75 : 25,
+              neutral: Math.abs(50 - rsi),
+              negative: rsi < 30 ? 100 : rsi < 50 ? 75 : 25,
+              rsi,
               macd: {
-                macd: 0,
-                signal: 0,
-                histogram: 0,
+                macd,
+                signal,
+                histogram
               },
               ma: {
-                ma7: calculateMA(prices, 7),
-                ma25: calculateMA(prices, 25),
-                ma99: calculateMA(prices, 99),
+                ma7,
+                ma25,
+                ma99
               },
             },
             strategy: determineStrategy(coin.priceChangePercent),
-            marketCap: Math.random() * 1000000000,
+            marketCap: coin.volume * parseFloat(coin.lastPrice || "0"),
             recentTrades: Array.from({ length: 20 }, (_, i) => ({
               time: Date.now() - i * 60000,
               price: (parseFloat(coin.lastPrice || "0") + (Math.random() - 0.5) * 10).toString(),
