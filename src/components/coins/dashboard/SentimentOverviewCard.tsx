@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import type { SentimentData } from "../types";
 
 interface SentimentOverviewCardProps {
-  data: SentimentData | null;
+  data: { [key: string]: SentimentData } | null;
   title: string;
   className?: string;
 }
@@ -14,9 +14,11 @@ export function SentimentOverviewCard({ data, title, className }: SentimentOverv
     if (!data) return [];
     
     const sentiments = { buy: 0, sell: 0, others: 0 };
-    Object.values(data.videos).forEach(video => {
-      video.comments.forEach(comment => {
-        sentiments[comment.indicator as keyof typeof sentiments]++;
+    Object.values(data).forEach(coinData => {
+      Object.values(coinData.videos).forEach(video => {
+        video.comments.forEach(comment => {
+          sentiments[comment.indicator as keyof typeof sentiments]++;
+        });
       });
     });
 

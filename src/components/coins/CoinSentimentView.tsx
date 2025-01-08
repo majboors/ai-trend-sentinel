@@ -15,6 +15,7 @@ import { SentimentStats } from "./SentimentStats";
 import { SentimentOverviewCard } from "./dashboard/SentimentOverviewCard";
 import { TopCoinsCard } from "./dashboard/TopCoinsCard";
 import { SentimentTrendCard } from "./dashboard/SentimentTrendCard";
+import { useAllCoinsSentiment } from "@/hooks/useAllCoinsSentiment";
 import type { SentimentData } from "./types";
 
 type SentimentFilter = "all" | "buy" | "sell" | "others";
@@ -26,6 +27,7 @@ export function CoinSentimentView() {
   const [loading, setLoading] = useState(true);
   const [loadingCoins, setLoadingCoins] = useState(true);
   const [sentimentFilter, setSentimentFilter] = useState<SentimentFilter>("all");
+  const { allCoinsData, loading: loadingAllCoins } = useAllCoinsSentiment();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -110,32 +112,33 @@ export function CoinSentimentView() {
 
   return (
     <div className="space-y-6">
-      {/* Overview Dashboard */}
+      {/* Overview Dashboard for All Coins */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8">
         <SentimentOverviewCard
-          data={sentimentData}
+          data={allCoinsData}
           title="Overall Market Sentiment"
           className="col-span-full md:col-span-2"
         />
         <TopCoinsCard
-          data={sentimentData}
+          data={allCoinsData}
           title="Top Bullish Coins"
           type="buy"
           className="col-span-full md:col-span-2"
         />
         <TopCoinsCard
-          data={sentimentData}
+          data={allCoinsData}
           title="Top Bearish Coins"
           type="sell"
           className="col-span-full md:col-span-2"
         />
         <SentimentTrendCard
-          data={sentimentData}
+          data={allCoinsData}
           title="Market Sentiment Trends"
           className="col-span-full md:col-span-3"
         />
       </div>
 
+      {/* Individual Coin Analysis */}
       <div className="glass-card p-6">
         <div className="mb-6">
           <label htmlFor="coin-select" className="block text-sm font-medium mb-2">

@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import type { SentimentData } from "../types";
 
 interface TopCoinsCardProps {
-  data: SentimentData | null;
+  data: { [key: string]: SentimentData } | null;
   title: string;
   type: "buy" | "sell" | "others";
   className?: string;
@@ -15,17 +15,23 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
     if (!data) return [];
     
     const coinSentiments: Record<string, number> = {};
-    Object.entries(data.videos).forEach(([_, video]) => {
-      video.comments.forEach(comment => {
-        if (comment.indicator === type) {
-          coinSentiments[video.title] = (coinSentiments[video.title] || 0) + 1;
-        }
+    Object.entries(data).forEach(([coin, coinData]) => {
+      let sentimentCount = 0;
+      Object.values(coinData.videos).forEach(video => {
+        video.comments.forEach(comment => {
+          if (comment.indicator === type) {
+            sentimentCount++;
+          }
+        });
       });
+      if (sentimentCount > 0) {
+        coinSentiments[coin] = sentimentCount;
+      }
     });
 
     return Object.entries(coinSentiments)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
+      .slice(0, 10)
       .map(([coin, count]) => ({
         coin: coin.length > 20 ? coin.substring(0, 20) + "..." : coin,
         count,
@@ -35,11 +41,11 @@ export function TopCoinsCard({ data, title, type, className }: TopCoinsCardProps
   const getBarColor = () => {
     switch (type) {
       case "buy":
-        return "hsl(142.1 76.2% 36.3%)"; // green-600
+        return "hsl(142.1 76.2% 36.3%)";
       case "sell":
-        return "hsl(346.8 77.2% 49.8%)"; // red-500
+        return "hsl(346.8 77.2% 49.8%)";
       default:
-        return "hsl(47.9 95.8% 53.1%)"; // yellow-400
+        return "hsl(47.9 95.8% 53.1%)";
     }
   };
 

@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import type { SentimentData } from "../types";
 
 interface SentimentTrendCardProps {
-  data: SentimentData | null;
+  data: { [key: string]: SentimentData } | null;
   title: string;
   className?: string;
 }
@@ -14,13 +14,16 @@ export function SentimentTrendCard({ data, title, className }: SentimentTrendCar
     if (!data) return [];
     
     const timelineData: Record<string, { buy: number; sell: number; others: number }> = {};
-    Object.values(data.videos).forEach(video => {
-      video.comments.forEach(comment => {
-        const date = new Date().toLocaleDateString(); // You might want to use actual dates from the API
-        if (!timelineData[date]) {
-          timelineData[date] = { buy: 0, sell: 0, others: 0 };
-        }
-        timelineData[date][comment.indicator as keyof typeof timelineData[string]]++;
+    
+    Object.values(data).forEach(coinData => {
+      Object.values(coinData.videos).forEach(video => {
+        video.comments.forEach(comment => {
+          const date = new Date().toLocaleDateString();
+          if (!timelineData[date]) {
+            timelineData[date] = { buy: 0, sell: 0, others: 0 };
+          }
+          timelineData[date][comment.indicator as keyof typeof timelineData[string]]++;
+        });
       });
     });
 
