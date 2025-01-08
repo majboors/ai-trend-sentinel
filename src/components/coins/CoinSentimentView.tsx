@@ -68,7 +68,7 @@ export function CoinSentimentView() {
       
       try {
         setLoading(true);
-        const response = await fetch(`http://45.90.122.221:5000/coin/${selectedCoin}`);
+        const response = await fetch(`https://crypto.techrealm.pk/coin/${selectedCoin}`);
         if (!response.ok) {
           throw new Error('Failed to fetch sentiment data');
         }
