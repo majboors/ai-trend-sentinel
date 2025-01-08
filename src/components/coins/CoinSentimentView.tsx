@@ -1,147 +1,169 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { DashboardSection } from "./dashboard/DashboardSection";
-import { CoinAnalysisSection } from "./analysis/CoinAnalysisSection";
-import { useAllCoinsSentiment } from "@/hooks/useAllCoinsSentiment";
+import { Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { VideoCard } from "./VideoCard";
+import { SentimentStats } from "./SentimentStats";
 import type { SentimentData } from "./types";
 
-const RETRY_DELAY = 5000; // 5 seconds delay before retry
-const MAX_RETRIES = 2;
+type SentimentFilter = "all" | "buy" | "sell" | "others";
 
 export function CoinSentimentView() {
   const [selectedCoin, setSelectedCoin] = useState<string>("");
   const [availableCoins, setAvailableCoins] = useState<string[]>([]);
   const [sentimentData, setSentimentData] = useState<SentimentData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const { allCoinsData, loading: loadingAllCoins } = useAllCoinsSentiment();
+  const [loading, setLoading] = useState(true);
+  const [loadingCoins, setLoadingCoins] = useState(true);
+  const [sentimentFilter, setSentimentFilter] = useState<SentimentFilter>("all");
   const { toast } = useToast();
 
-  // Fetch available coins first with retry logic
   useEffect(() => {
-    let retryCount = 0;
-    let isMounted = true;
-    
     const fetchCoins = async () => {
       try {
+        setLoadingCoins(true);
         const response = await fetch('https://crypto.techrealm.pk/coin/search');
         if (!response.ok) {
           throw new Error('Failed to fetch coins');
         }
         const data = await response.json();
-        
-        // Filter out any invalid coins and ensure we have an array
-        const validCoins = Array.isArray(data.coins) ? data.coins.filter(Boolean) : [];
-        
-        if (isMounted) {
-          setAvailableCoins(validCoins);
-          // If no coin is selected and we have coins, select the first one
-          if (!selectedCoin && validCoins.length > 0) {
-            setSelectedCoin(validCoins[0]);
-          }
+        setAvailableCoins(data.coins);
+        if (data.coins.length > 0 && !selectedCoin) {
+          setSelectedCoin(data.coins[0]);
         }
       } catch (error) {
         console.error('Error fetching coins:', error);
-        if (retryCount < MAX_RETRIES && isMounted) {
-          retryCount++;
-          setTimeout(fetchCoins, RETRY_DELAY);
-        } else if (isMounted) {
-          toast({
-            title: "Warning",
-            description: "Could not load available coins. Please try again later.",
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "Error",
+          description: "Failed to fetch available coins. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingCoins(false);
       }
     };
 
     fetchCoins();
-    return () => {
-      isMounted = false;
-    };
-  }, [toast, selectedCoin]);
+  }, [toast]);
 
-  // Fetch sentiment data separately with retry logic
   useEffect(() => {
-    if (!selectedCoin) return;
-    
-    let retryCount = 0;
-    let isMounted = true;
-    let controller = new AbortController();
-    
     const fetchSentimentData = async () => {
+      if (!selectedCoin) return;
+      
       try {
         setLoading(true);
-        const response = await fetch(`https://crypto.techrealm.pk/coin/${selectedCoin}`, {
-          signal: controller.signal
-        });
-        
+        const response = await fetch(`https://crypto.techrealm.pk/coin/${selectedCoin}`);
         if (!response.ok) {
-          // If this coin fails, try the next one in the list
-          const currentIndex = availableCoins.indexOf(selectedCoin);
-          if (currentIndex < availableCoins.length - 1) {
-            setSelectedCoin(availableCoins[currentIndex + 1]);
-          }
-          throw new Error(`Failed to fetch sentiment data for ${selectedCoin}`);
+          throw new Error('Failed to fetch sentiment data');
         }
-        
         const data = await response.json();
-        if (isMounted) {
-          // Update sentiment data incrementally as we receive it
-          setSentimentData(prevData => ({
-            ...prevData,
-            ...data
-          }));
-        }
+        setSentimentData(data);
       } catch (error) {
-        if (error.name === 'AbortError') {
-          console.log('Fetch aborted');
-          return;
-        }
         console.error('Error fetching sentiment data:', error);
-        if (retryCount < MAX_RETRIES && isMounted) {
-          retryCount++;
-          setTimeout(fetchSentimentData, RETRY_DELAY);
-        } else if (isMounted) {
-          toast({
-            title: "Warning",
-            description: `Could not load sentiment data for ${selectedCoin}. Trying next coin.`,
-            variant: "destructive",
-          });
-          setSentimentData(null);
-          
-          // Try the next coin if available
-          const currentIndex = availableCoins.indexOf(selectedCoin);
-          if (currentIndex < availableCoins.length - 1) {
-            setSelectedCoin(availableCoins[currentIndex + 1]);
-          }
-        }
+        toast({
+          title: "Error",
+          description: "Failed to fetch sentiment data. Please try again later.",
+          variant: "destructive",
+        });
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
     fetchSentimentData();
-    return () => {
-      isMounted = false;
-      controller.abort();
-    };
-  }, [selectedCoin, toast, availableCoins]);
+  }, [selectedCoin, toast]);
+
+  const calculateSentiments = () => {
+    if (!sentimentData?.videos) return { buy: 0, sell: 0, others: 0, total: 0 };
+
+    let buy = 0, sell = 0, others = 0;
+
+    Object.values(sentimentData.videos).forEach(video => {
+      video.comments.forEach(comment => {
+        if (comment.indicator === 'buy') buy++;
+        else if (comment.indicator === 'sell') sell++;
+        else others++;
+      });
+    });
+
+    const total = buy + sell + others;
+    return { buy, sell, others, total };
+  };
+
+  if (loadingCoins) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Dashboard Section - Show loading state */}
-      <DashboardSection allCoinsData={allCoinsData} loading={loadingAllCoins} />
+      <div className="glass-card p-6">
+        <div className="mb-6">
+          <label htmlFor="coin-select" className="block text-sm font-medium mb-2">
+            Select Coin
+          </label>
+          <Select value={selectedCoin} onValueChange={setSelectedCoin}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a coin" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableCoins.map((coin) => (
+                <SelectItem key={coin} value={coin}>
+                  {coin}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      {/* Coin Analysis Section - Show immediately */}
-      <CoinAnalysisSection
-        selectedCoin={selectedCoin}
-        setSelectedCoin={setSelectedCoin}
-        availableCoins={availableCoins}
-        sentimentData={sentimentData}
-        loading={loading}
-      />
+        <div className="mb-6">
+          <Label className="text-sm font-medium mb-2">Filter Comments</Label>
+          <RadioGroup
+            defaultValue="all"
+            value={sentimentFilter}
+            onValueChange={(value) => setSentimentFilter(value as SentimentFilter)}
+            className="flex space-x-4 mt-2"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="all" id="all" />
+              <Label htmlFor="all">All</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="buy" id="buy" />
+              <Label htmlFor="buy" className="text-green-500">Buy</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="sell" id="sell" />
+              <Label htmlFor="sell" className="text-red-500">Sell</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="others" id="others" />
+              <Label htmlFor="others" className="text-yellow-500">Others</Label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        <SentimentStats loading={loading} stats={calculateSentiments()} />
+      </div>
+
+      {sentimentData && Object.entries(sentimentData.videos).map(([videoId, video]) => (
+        <VideoCard 
+          key={videoId} 
+          videoId={videoId} 
+          video={video} 
+          sentimentFilter={sentimentFilter}
+        />
+      ))}
     </div>
   );
 }
