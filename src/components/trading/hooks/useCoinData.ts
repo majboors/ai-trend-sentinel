@@ -14,9 +14,17 @@ export function useCoinData() {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
+        body: {
+          includeKlines: true, // Add this flag to request klines data
+          interval: '1h',      // Request hourly klines
+          limit: 24           // Get last 24 hours of data
+        }
       });
 
-      if (response.error) throw new Error(response.error.message);
+      if (response.error) {
+        console.error('Error fetching coin data:', response.error);
+        throw new Error(response.error.message);
+      }
 
       // Transform the data to include indicators and strategy
       return response.data.map((coin: any) => ({
@@ -27,7 +35,7 @@ export function useCoinData() {
           negative: Math.random() * 100,
         },
         strategy: determineStrategy(coin.priceChangePercent),
-        klines: [], // Will be populated when viewing individual coins
+        klines: Array.isArray(coin.klines) ? coin.klines : [], // Ensure klines is always an array
       }));
     },
     refetchInterval: 30000, // Refetch every 30 seconds
