@@ -38,7 +38,7 @@ serve(async (req) => {
       throw new Error("No API keys found");
     }
 
-    // Fetch isolated margin account details
+    // First fetch isolated margin account details
     const timestamp = Date.now();
     const queryString = `timestamp=${timestamp}`;
     const signature = await createHmac(apiKeys.binance_api_secret, queryString);
@@ -55,10 +55,14 @@ serve(async (req) => {
     );
 
     if (!marginResponse.ok) {
-      throw new Error(`Binance API error: ${marginResponse.statusText}`);
+      const errorText = await marginResponse.text();
+      console.error("Binance API error:", errorText);
+      throw new Error(`Binance API error: ${marginResponse.statusText} - ${errorText}`);
     }
 
     const marginData = await marginResponse.json();
+    console.log("Successfully fetched margin account details");
+    
     const whales = [];
 
     // Fetch trades for each isolated margin pair
@@ -70,39 +74,48 @@ serve(async (req) => {
       const tradeQueryString = `symbol=${symbol}&isIsolated=TRUE&timestamp=${tradeTimestamp}`;
       const tradeSignature = await createHmac(apiKeys.binance_api_secret, tradeQueryString);
 
-      const tradesResponse = await fetch(
-        `https://api.binance.com/sapi/v1/margin/myTrades?${tradeQueryString}&signature=${tradeSignature}`,
-        {
-          headers: {
-            "X-MBX-APIKEY": apiKeys.binance_api_key,
-          },
+      try {
+        const tradesResponse = await fetch(
+          `https://api.binance.com/sapi/v1/margin/myTrades?${tradeQueryString}&signature=${tradeSignature}`,
+          {
+            headers: {
+              "X-MBX-APIKEY": apiKeys.binance_api_key,
+            },
+          }
+        );
+
+        if (!tradesResponse.ok) {
+          console.error(`Failed to fetch trades for ${symbol}: ${tradesResponse.statusText}`);
+          continue;
         }
-      );
 
-      if (!tradesResponse.ok) {
-        console.error(`Failed to fetch trades for ${symbol}: ${tradesResponse.statusText}`);
-        continue;
+        const trades = await tradesResponse.json();
+        console.log(`Found ${trades.length} trades for ${symbol}`);
+        
+        // Process and filter whale trades (trades > $100k)
+        const whaleTrades = trades
+          .filter((trade: any) => {
+            const tradeValue = parseFloat(trade.price) * parseFloat(trade.qty);
+            return tradeValue > 100000; // Filter trades > $100k
+          })
+          .map((trade: any) => ({
+            user_id: user.id,
+            symbol: trade.symbol,
+            amount: parseFloat(trade.price) * parseFloat(trade.qty),
+            price: parseFloat(trade.price),
+            trade_type: trade.isBuyer ? 'buy' : 'sell',
+            timestamp: new Date(trade.time),
+          }));
+
+        whales.push(...whaleTrades);
+      } catch (error) {
+        console.error(`Error processing trades for ${symbol}:`, error);
       }
-
-      const trades = await tradesResponse.json();
-      
-      // Process and filter whale trades (e.g., large volume trades)
-      const whaleTrades = trades
-        .filter((trade: any) => parseFloat(trade.qty) * parseFloat(trade.price) > 100000) // Filter trades > $100k
-        .map((trade: any) => ({
-          user_id: user.id,
-          symbol: trade.symbol,
-          amount: parseFloat(trade.qty) * parseFloat(trade.price),
-          price: parseFloat(trade.price),
-          trade_type: trade.isBuyer ? 'buy' : 'sell',
-          timestamp: new Date(trade.time),
-        }));
-
-      whales.push(...whaleTrades);
     }
 
     // Store whale trades in the database
     if (whales.length > 0) {
+      console.log(`Storing ${whales.length} whale trades in database`);
       const { error: insertError } = await supabaseClient
         .from('whale_trades')
         .insert(whales);
@@ -111,6 +124,8 @@ serve(async (req) => {
         console.error('Error inserting whale trades:', insertError);
         throw insertError;
       }
+    } else {
+      console.log('No whale trades found');
     }
 
     return new Response(JSON.stringify(whales), {
