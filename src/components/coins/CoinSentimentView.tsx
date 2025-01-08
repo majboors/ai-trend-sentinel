@@ -1,24 +1,10 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { VideoCard } from "./VideoCard";
-import { SentimentStats } from "./SentimentStats";
-import { SentimentOverviewCard } from "./dashboard/SentimentOverviewCard";
-import { TopCoinsCard } from "./dashboard/TopCoinsCard";
-import { SentimentTrendCard } from "./dashboard/SentimentTrendCard";
+import { DashboardSection } from "./dashboard/DashboardSection";
+import { CoinAnalysisSection } from "./analysis/CoinAnalysisSection";
 import { useAllCoinsSentiment } from "@/hooks/useAllCoinsSentiment";
 import type { SentimentData } from "./types";
-
-type SentimentFilter = "all" | "buy" | "sell" | "others";
 
 export function CoinSentimentView() {
   const [selectedCoin, setSelectedCoin] = useState<string>("");
@@ -26,7 +12,6 @@ export function CoinSentimentView() {
   const [sentimentData, setSentimentData] = useState<SentimentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingCoins, setLoadingCoins] = useState(true);
-  const [sentimentFilter, setSentimentFilter] = useState<SentimentFilter>("all");
   const { allCoinsData, loading: loadingAllCoins } = useAllCoinsSentiment();
   const { toast } = useToast();
 
@@ -56,7 +41,7 @@ export function CoinSentimentView() {
     };
 
     fetchCoins();
-  }, [toast]);
+  }, [toast, selectedCoin]);
 
   useEffect(() => {
     const fetchSentimentData = async () => {
@@ -85,23 +70,6 @@ export function CoinSentimentView() {
     fetchSentimentData();
   }, [selectedCoin, toast]);
 
-  const calculateSentiments = () => {
-    if (!sentimentData?.videos) return { buy: 0, sell: 0, others: 0, total: 0 };
-
-    let buy = 0, sell = 0, others = 0;
-
-    Object.values(sentimentData.videos).forEach(video => {
-      video.comments.forEach(comment => {
-        if (comment.indicator === 'buy') buy++;
-        else if (comment.indicator === 'sell') sell++;
-        else others++;
-      });
-    });
-
-    const total = buy + sell + others;
-    return { buy, sell, others, total };
-  };
-
   if (loadingCoins) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -112,93 +80,17 @@ export function CoinSentimentView() {
 
   return (
     <div className="space-y-6">
-      {/* Overview Dashboard for All Coins */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8">
-        <SentimentOverviewCard
-          data={allCoinsData}
-          title="Overall Market Sentiment"
-          className="col-span-full md:col-span-2"
-        />
-        <TopCoinsCard
-          data={allCoinsData}
-          title="Top Bullish Coins"
-          type="buy"
-          className="col-span-full md:col-span-2"
-        />
-        <TopCoinsCard
-          data={allCoinsData}
-          title="Top Bearish Coins"
-          type="sell"
-          className="col-span-full md:col-span-2"
-        />
-        <SentimentTrendCard
-          data={allCoinsData}
-          title="Market Sentiment Trends"
-          className="col-span-full md:col-span-3"
-        />
-      </div>
+      {/* Overview Dashboard */}
+      <DashboardSection allCoinsData={allCoinsData} loading={loadingAllCoins} />
 
       {/* Individual Coin Analysis */}
-      <div className="glass-card p-6">
-        <div className="mb-6">
-          <label htmlFor="coin-select" className="block text-sm font-medium mb-2">
-            Select Coin for Detailed Analysis
-          </label>
-          <Select value={selectedCoin} onValueChange={setSelectedCoin}>
-            <SelectTrigger className="w-full md:w-1/3">
-              <SelectValue placeholder="Select a coin" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableCoins.map((coin) => (
-                <SelectItem key={coin} value={coin}>
-                  {coin}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="mb-6">
-          <Label className="text-sm font-medium mb-2">Filter Comments</Label>
-          <RadioGroup
-            defaultValue="all"
-            value={sentimentFilter}
-            onValueChange={(value) => setSentimentFilter(value as SentimentFilter)}
-            className="flex flex-wrap gap-4 mt-2"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="all" id="all" />
-              <Label htmlFor="all">All</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="buy" id="buy" />
-              <Label htmlFor="buy" className="text-green-500">Buy</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="sell" id="sell" />
-              <Label htmlFor="sell" className="text-red-500">Sell</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="others" id="others" />
-              <Label htmlFor="others" className="text-yellow-500">Others</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        <SentimentStats loading={loading} stats={calculateSentiments()} />
-      </div>
-
-      {/* Video Cards */}
-      <div className="grid grid-cols-1 gap-6">
-        {sentimentData && Object.entries(sentimentData.videos).map(([videoId, video]) => (
-          <VideoCard 
-            key={videoId} 
-            videoId={videoId} 
-            video={video} 
-            sentimentFilter={sentimentFilter}
-          />
-        ))}
-      </div>
+      <CoinAnalysisSection
+        selectedCoin={selectedCoin}
+        setSelectedCoin={setSelectedCoin}
+        availableCoins={availableCoins}
+        sentimentData={sentimentData}
+        loading={loading}
+      />
     </div>
   );
 }
