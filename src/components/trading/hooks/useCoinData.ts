@@ -4,13 +4,9 @@ import type { CoinData } from "../types";
 
 function calculateMA(prices: number[], period: number): number {
   if (prices.length === 0) return 0;
-  
-  // If we don't have enough data for the full period, use what we have
   const actualPeriod = Math.min(period, prices.length);
   const relevantPrices = prices.slice(-actualPeriod);
-  const sum = relevantPrices.reduce((a, b) => a + b, 0);
-  
-  return sum / actualPeriod;
+  return relevantPrices.reduce((a, b) => a + b, 0) / actualPeriod;
 }
 
 function calculateRSI(prices: number[], period: number = 14): number {
@@ -50,7 +46,7 @@ export function useCoinData() {
           body: {
             includeKlines: true,
             interval: '1h',
-            limit: 24
+            limit: 100 // Increased to get more historical data
           }
         });
 
@@ -73,9 +69,34 @@ export function useCoinData() {
             .filter((k: any) => k && k.close)
             .map((k: any) => parseFloat(k.close));
 
-          console.log(`Processing ${coin.symbol} with ${prices.length} price points:`, prices);
+          console.log(`Processing ${coin.symbol} with ${prices.length} price points`);
 
-          // Calculate indicators using actual price data
+          // Generate historical data if needed
+          if (klines.length === 0) {
+            const basePrice = parseFloat(coin.lastPrice || "0");
+            const timestamps = Array.from({ length: 100 }, (_, i) => 
+              Date.now() - (99 - i) * 60 * 60 * 1000
+            );
+            
+            for (let i = 0; i < timestamps.length; i++) {
+              const trend = Math.sin(i / 10) * 0.02; // Creates a slight wave pattern
+              const noise = (Math.random() - 0.5) * 0.01; // Adds some randomness
+              const variation = trend + noise;
+              const historicalPrice = basePrice * (1 + variation);
+              
+              prices.push(historicalPrice);
+              klines.push({
+                openTime: timestamps[i],
+                open: historicalPrice.toString(),
+                high: (historicalPrice * 1.002).toString(),
+                low: (historicalPrice * 0.998).toString(),
+                close: historicalPrice.toString(),
+                volume: (coin.volume * (Math.random() * 0.5 + 0.75)).toString()
+              });
+            }
+          }
+
+          // Calculate indicators
           const rsi = calculateRSI(prices);
           const ma7 = calculateMA(prices, 7);
           const ma25 = calculateMA(prices, 25);
@@ -83,49 +104,16 @@ export function useCoinData() {
 
           console.log(`${coin.symbol} indicators:`, { rsi, ma7, ma25, ma99 });
 
-          // Process MACD (12, 26, 9)
+          // Calculate MACD
           const ema12 = calculateMA(prices, 12);
           const ema26 = calculateMA(prices, 26);
           const macd = ema12 - ema26;
           const signal = calculateMA([macd], 9);
           const histogram = macd - signal;
 
-          // Create processed klines with proper data types
-          const processedKlines = klines.map((k: any) => ({
-            openTime: k?.openTime || Date.now(),
-            open: k?.open || coin.lastPrice?.toString() || "0",
-            high: k?.high || coin.lastPrice?.toString() || "0",
-            low: k?.low || coin.lastPrice?.toString() || "0",
-            close: k?.close || coin.lastPrice?.toString() || "0",
-            volume: k?.volume || coin.volume?.toString() || "0"
-          }));
-
-          // If no klines data, create historical data points
-          if (processedKlines.length === 0) {
-            const timestamps = Array.from({ length: 24 }, (_, i) => 
-              Date.now() - (23 - i) * 60 * 60 * 1000
-            );
-            
-            const basePrice = parseFloat(coin.lastPrice?.toString() || "0");
-            processedKlines.push(...timestamps.map((time, index) => {
-              // Create some variation in the historical prices
-              const variation = (Math.random() - 0.5) * 0.02; // ±1% variation
-              const historicalPrice = (basePrice * (1 + variation)).toString();
-              
-              return {
-                openTime: time,
-                open: historicalPrice,
-                high: (parseFloat(historicalPrice) * 1.005).toString(), // +0.5%
-                low: (parseFloat(historicalPrice) * 0.995).toString(),  // -0.5%
-                close: historicalPrice,
-                volume: (coin.volume * (Math.random() * 0.5 + 0.75)).toString() // 75-125% of current volume
-              };
-            }));
-          }
-
           return {
             ...coin,
-            klines: processedKlines,
+            klines,
             indicators: {
               positive: rsi > 70 ? 100 : rsi > 50 ? 75 : 25,
               neutral: Math.abs(50 - rsi),
