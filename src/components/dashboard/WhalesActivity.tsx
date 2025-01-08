@@ -33,7 +33,7 @@ export function WhalesActivity() {
         if (dbError) throw dbError;
 
         if (whaleData) {
-          setWhales(whaleData);
+          setWhales(whaleData as WhaleTrade[]);
         }
 
         // Then fetch fresh data from Binance

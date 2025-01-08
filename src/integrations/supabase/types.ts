@@ -203,11 +203,11 @@ export type Database = {
           closed_at: string | null
           created_at: string | null
           entry_price: number
-          exit_price: number | null
+          exit_price?: number | null
           high_price: number
           id: string
           low_price: number
-          profit_loss: number | null
+          profit_loss?: number | null
           status: Database["public"]["Enums"]["trade_status"] | null
           symbol: string
           user_id: string
@@ -220,7 +220,7 @@ export type Database = {
           entry_price: number
           exit_price?: number | null
           high_price: number
-          id?: string
+          id: string
           low_price: number
           profit_loss?: number | null
           status?: Database["public"]["Enums"]["trade_status"] | null
