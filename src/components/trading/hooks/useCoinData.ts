@@ -109,7 +109,10 @@ export function useCoinData() {
             ...coinData,
             price: parseFloat(coinData.lastPrice),
             priceChange: coinData.priceChangePercent,
-            analysis: generateAnalysis(coinData),
+            analysis: generateAnalysis({
+              ...coinData,
+              indicators: { rsi, ma7, ma25, ma99 }
+            }),
             sentiment: {
               neutral: Math.abs(50 - rsi),
               positive: rsi > 70 ? 100 : rsi > 50 ? 75 : 25,
