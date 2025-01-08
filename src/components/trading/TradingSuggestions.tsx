@@ -43,6 +43,25 @@ export function TradingSuggestions() {
         return;
       }
 
+      // First check if a trade view with this name already exists for the user
+      const { data: existingView, error: checkError } = await supabase
+        .from('trade_views')
+        .select()
+        .eq('user_id', sessionData.session.user.id)
+        .eq('name', name)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingView) {
+        toast({
+          title: "Error",
+          description: "A trading view with this name already exists. Please choose a different name.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { data, error: insertError } = await supabase
         .from('trade_views')
         .insert([
@@ -74,11 +93,11 @@ export function TradingSuggestions() {
         title: "Analysis Started",
         description: "Analyzing coins for trading suggestions...",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating trade view:', error);
       toast({
         title: "Error",
-        description: "Failed to start analysis. Please try again.",
+        description: error.message || "Failed to start analysis. Please try again.",
         variant: "destructive",
       });
     }
@@ -110,11 +129,11 @@ export function TradingSuggestions() {
           description: "You've reviewed all available coins.",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving coin analysis:', error);
       toast({
         title: "Error",
-        description: "Failed to save analysis",
+        description: error.message || "Failed to save analysis",
         variant: "destructive",
       });
     }
@@ -142,11 +161,11 @@ export function TradingSuggestions() {
       });
       
       handleNext();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error recording trade:', error);
       toast({
         title: "Error",
-        description: "Failed to record trade",
+        description: error.message || "Failed to record trade",
         variant: "destructive",
       });
     }
