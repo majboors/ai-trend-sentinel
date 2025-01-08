@@ -19,6 +19,7 @@ export function CoinSentimentView() {
   // Fetch available coins first with retry logic
   useEffect(() => {
     let retryCount = 0;
+    let isMounted = true;
     
     const fetchCoins = async () => {
       try {
@@ -27,13 +28,15 @@ export function CoinSentimentView() {
           throw new Error('Failed to fetch coins');
         }
         const data = await response.json();
-        setAvailableCoins(data.coins || []);
+        if (isMounted) {
+          setAvailableCoins(data.coins || []);
+        }
       } catch (error) {
         console.error('Error fetching coins:', error);
-        if (retryCount < MAX_RETRIES) {
+        if (retryCount < MAX_RETRIES && isMounted) {
           retryCount++;
           setTimeout(fetchCoins, RETRY_DELAY);
-        } else {
+        } else if (isMounted) {
           toast({
             title: "Warning",
             description: "Could not load available coins. Please try again later.",
@@ -44,6 +47,9 @@ export function CoinSentimentView() {
     };
 
     fetchCoins();
+    return () => {
+      isMounted = false;
+    };
   }, [toast]);
 
   // Fetch sentiment data separately with retry logic
@@ -51,6 +57,7 @@ export function CoinSentimentView() {
     if (!selectedCoin) return;
     
     let retryCount = 0;
+    let isMounted = true;
     
     const fetchSentimentData = async () => {
       try {
@@ -60,13 +67,15 @@ export function CoinSentimentView() {
           throw new Error('Failed to fetch sentiment data');
         }
         const data = await response.json();
-        setSentimentData(data);
+        if (isMounted) {
+          setSentimentData(data);
+        }
       } catch (error) {
         console.error('Error fetching sentiment data:', error);
-        if (retryCount < MAX_RETRIES) {
+        if (retryCount < MAX_RETRIES && isMounted) {
           retryCount++;
           setTimeout(fetchSentimentData, RETRY_DELAY);
-        } else {
+        } else if (isMounted) {
           toast({
             title: "Warning",
             description: "Could not load sentiment data. Please try again later.",
@@ -75,11 +84,16 @@ export function CoinSentimentView() {
           setSentimentData(null);
         }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchSentimentData();
+    return () => {
+      isMounted = false;
+    };
   }, [selectedCoin, toast]);
 
   return (
