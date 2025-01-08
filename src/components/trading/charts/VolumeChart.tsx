@@ -14,10 +14,34 @@ interface VolumeChartProps {
 }
 
 export function VolumeChart({ coin }: VolumeChartProps) {
-  const chartData = coin.klines.map((kline) => ({
-    time: new Date(kline.openTime).toLocaleTimeString(),
-    volume: parseFloat(kline.volume),
-  }));
+  if (!coin.klines || !Array.isArray(coin.klines) || coin.klines.length === 0) {
+    return (
+      <Card className="p-4">
+        <h3 className="text-lg font-semibold mb-2">Volume</h3>
+        <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+          No volume data available
+        </div>
+      </Card>
+    );
+  }
+
+  const chartData = coin.klines
+    .filter(kline => kline && kline.openTime && kline.volume)
+    .map((kline) => ({
+      time: new Date(kline.openTime).toLocaleTimeString(),
+      volume: parseFloat(kline.volume),
+    }));
+
+  if (chartData.length === 0) {
+    return (
+      <Card className="p-4">
+        <h3 className="text-lg font-semibold mb-2">Volume</h3>
+        <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+          No valid volume data available
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-4">

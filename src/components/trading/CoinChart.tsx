@@ -18,6 +18,17 @@ interface CoinChartProps {
 }
 
 export function CoinChart({ coin }: CoinChartProps) {
+  // Check if klines data exists and is an array
+  if (!coin.klines || !Array.isArray(coin.klines) || coin.klines.length === 0) {
+    return (
+      <Card className="p-4">
+        <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+          No chart data available
+        </div>
+      </Card>
+    );
+  }
+
   const chartData = coin.klines
     .filter(kline => kline && kline.openTime && kline.close)
     .map((kline) => ({
@@ -30,7 +41,7 @@ export function CoinChart({ coin }: CoinChartProps) {
     return (
       <Card className="p-4">
         <div className="h-[400px] flex items-center justify-center text-muted-foreground">
-          No chart data available
+          No valid chart data available
         </div>
       </Card>
     );

@@ -15,6 +15,17 @@ interface IndicatorsChartProps {
 }
 
 export function IndicatorsChart({ coin }: IndicatorsChartProps) {
+  if (!coin.klines || !Array.isArray(coin.klines) || coin.klines.length === 0) {
+    return (
+      <Card className="p-4">
+        <h3 className="text-lg font-semibold mb-2">Technical Indicators</h3>
+        <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+          No indicator data available
+        </div>
+      </Card>
+    );
+  }
+
   const chartData = coin.klines.map((kline, index) => ({
     time: new Date(kline.openTime).toLocaleTimeString(),
     price: parseFloat(kline.close),
