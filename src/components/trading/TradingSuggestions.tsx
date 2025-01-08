@@ -5,8 +5,7 @@ import { TradeNameDialog } from "./TradeNameDialog";
 import { CoinAnalysisCard } from "./CoinAnalysisCard";
 import { CoinVolatileView } from "@/components/coins/CoinVolatileView";
 import { StartAnalysisButton } from "./StartAnalysisButton";
-import { ViewTypeSelector } from "./ViewTypeSelector";
-import { AnalysisProgress } from "./AnalysisProgress";
+import { AnalysisHeader } from "./analysis/AnalysisHeader";
 import { useCoinData } from "./hooks/useCoinData";
 import type { TradeViewState } from "./types";
 
@@ -43,7 +42,6 @@ export function TradingSuggestions() {
         return;
       }
 
-      // First check if a trade view with this name already exists for the user
       const { data: existingView, error: checkError } = await supabase
         .from('trade_views')
         .select()
@@ -64,21 +62,15 @@ export function TradingSuggestions() {
 
       const { data, error: insertError } = await supabase
         .from('trade_views')
-        .insert([
-          { 
-            name, 
-            user_id: sessionData.session.user.id,
-            status: 'active'
-          }
-        ])
+        .insert([{ 
+          name, 
+          user_id: sessionData.session.user.id,
+          status: 'active'
+        }])
         .select()
         .single();
 
       if (insertError) throw insertError;
-
-      if (!data) {
-        throw new Error('No data returned from insert');
-      }
 
       setTradeView({
         id: data.id,
@@ -109,14 +101,12 @@ export function TradingSuggestions() {
     try {
       await supabase
         .from('coin_indicators')
-        .insert([
-          {
-            trade_view_id: tradeView.id,
-            coin_symbol: currentCoin.symbol,
-            sentiment: currentCoin.strategy,
-            indicators: currentCoin.indicators,
-          }
-        ]);
+        .insert([{
+          trade_view_id: tradeView.id,
+          coin_symbol: currentCoin.symbol,
+          sentiment: currentCoin.strategy,
+          indicators: currentCoin.indicators,
+        }]);
 
       if (tradeView.currentIndex < coins.length - 1) {
         setTradeView(prev => ({
@@ -145,15 +135,13 @@ export function TradingSuggestions() {
     try {
       await supabase
         .from('coin_indicators')
-        .insert([
-          {
-            trade_view_id: tradeView.id,
-            coin_symbol: currentCoin.symbol,
-            sentiment: currentCoin.strategy,
-            indicators: currentCoin.indicators,
-            user_response: 'buy'
-          }
-        ]);
+        .insert([{
+          trade_view_id: tradeView.id,
+          coin_symbol: currentCoin.symbol,
+          sentiment: currentCoin.strategy,
+          indicators: currentCoin.indicators,
+          user_response: 'buy'
+        }]);
 
       toast({
         title: "Trade Recorded",
@@ -173,43 +161,52 @@ export function TradingSuggestions() {
 
   if (!started) {
     return (
-      <>
+      <div className="glass-card p-8">
         <StartAnalysisButton onClick={handleStart} />
         <TradeNameDialog
           open={isTradeNameDialogOpen}
           onOpenChange={setIsTradeNameDialogOpen}
           onSubmit={handleCreateTradeView}
         />
-      </>
+      </div>
     );
   }
 
   if (isLoading) {
-    return <div>Loading coins...</div>;
+    return (
+      <div className="glass-card p-8 flex items-center justify-center min-h-[60vh]">
+        <p className="text-lg text-muted-foreground">Loading coins...</p>
+      </div>
+    );
   }
 
   if (error) {
-    return <div>Error: {error.message}</div>;
+    return (
+      <div className="glass-card p-8 flex items-center justify-center min-h-[60vh]">
+        <p className="text-lg text-red-500">Error: {error.message}</p>
+      </div>
+    );
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <ViewTypeSelector value={viewType} onValueChange={setViewType} />
+    <div className="glass-card p-8 space-y-6">
+      <AnalysisHeader
+        viewType={viewType}
+        onViewTypeChange={setViewType}
+        currentIndex={tradeView.currentIndex}
+        total={coins.length}
+      />
 
       {viewType === "volatile" ? (
         <CoinVolatileView />
       ) : (
-        <>
-          <AnalysisProgress currentIndex={tradeView.currentIndex} total={coins.length} />
-
-          {currentCoin && (
-            <CoinAnalysisCard
-              coin={currentCoin}
-              onNext={handleNext}
-              onBuy={handleBuy}
-            />
-          )}
-        </>
+        currentCoin && (
+          <CoinAnalysisCard
+            coin={currentCoin}
+            onNext={handleNext}
+            onBuy={handleBuy}
+          />
+        )
       )}
     </div>
   );

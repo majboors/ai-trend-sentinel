@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, TrendingUp, TrendingDown } from "lucide-react";
 import { MarketSentiment } from "@/components/dashboard/MarketSentiment";
 import { CoinChart } from "./CoinChart";
 import type { CoinData } from "./types";
@@ -13,17 +13,26 @@ interface CoinAnalysisCardProps {
 
 export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps) {
   return (
-    <Card className="p-6 space-y-6">
+    <Card className="p-6 space-y-8 bg-card/50 backdrop-blur-sm border-white/10">
       <div className="flex justify-between items-start">
-        <div>
-          <h2 className="text-2xl font-bold">{coin.baseAsset}/{coin.quoteAsset}</h2>
+        <div className="space-y-1">
+          <h2 className="text-2xl font-bold tracking-tight">
+            {coin.baseAsset}/{coin.quoteAsset}
+          </h2>
           <p className="text-muted-foreground">{coin.symbol}</p>
         </div>
-        <div className="text-right">
-          <p className="text-lg font-semibold">
+        <div className="text-right space-y-1">
+          <p className="text-xl font-semibold tracking-tight">
             ${parseFloat(coin.lastPrice.toString()).toLocaleString()}
           </p>
-          <p className={`text-sm ${coin.priceChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+          <p className={`flex items-center justify-end gap-1 ${
+            coin.priceChangePercent >= 0 ? 'text-green-500' : 'text-red-500'
+          }`}>
+            {coin.priceChangePercent >= 0 ? (
+              <TrendingUp className="w-4 h-4" />
+            ) : (
+              <TrendingDown className="w-4 h-4" />
+            )}
             {coin.priceChangePercent.toFixed(2)}%
           </p>
         </div>
@@ -31,10 +40,12 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
 
       <CoinChart coin={coin} />
 
-      <MarketSentiment />
+      <div className="p-4 bg-card/30 rounded-lg">
+        <MarketSentiment />
+      </div>
 
-      <div className="space-y-2">
-        <h3 className="font-semibold">Suggested Strategy</h3>
+      <div className="space-y-3">
+        <h3 className="font-semibold text-lg">Suggested Strategy</h3>
         <p className={`text-lg font-bold ${
           coin.strategy === "buy" 
             ? "text-green-500" 
@@ -46,13 +57,21 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
         </p>
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-3 pt-4">
         {coin.strategy === "buy" && (
-          <Button onClick={onBuy} variant="default">
-            Buy
+          <Button 
+            onClick={onBuy} 
+            variant="default"
+            className="px-6"
+          >
+            Buy Now
           </Button>
         )}
-        <Button onClick={onNext} variant="outline" className="gap-2">
+        <Button 
+          onClick={onNext} 
+          variant="outline" 
+          className="gap-2"
+        >
           Next <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
