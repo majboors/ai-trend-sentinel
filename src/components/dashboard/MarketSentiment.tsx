@@ -16,7 +16,7 @@ const defaultSentimentData: SentimentData[] = [
 ];
 
 export function MarketSentiment() {
-  const [selectedCoin, setSelectedCoin] = useState<string>("");
+  const [selectedCoin, setSelectedCoin] = useState<string>("market");
   const [availableCoins, setAvailableCoins] = useState<string[]>([]);
   const [sentimentData, setSentimentData] = useState<SentimentData[]>(defaultSentimentData);
   const [loading, setLoading] = useState(false);
@@ -32,7 +32,11 @@ export function MarketSentiment() {
         }
         const data = await response.json();
         if (data.coins && Array.isArray(data.coins)) {
-          setAvailableCoins(data.coins);
+          // Filter out any invalid coin symbols
+          const validCoins = data.coins.filter(coin => 
+            typeof coin === 'string' && coin.length > 0 && !coin.includes(' ')
+          );
+          setAvailableCoins(validCoins);
         }
       } catch (error) {
         console.error('Error fetching coins:', error);
@@ -47,7 +51,7 @@ export function MarketSentiment() {
   // Fetch sentiment data when coin is selected
   useEffect(() => {
     const fetchSentimentData = async () => {
-      if (!selectedCoin) return;
+      if (!selectedCoin || selectedCoin === "market") return;
       
       try {
         setLoading(true);
@@ -73,11 +77,11 @@ export function MarketSentiment() {
       }
     };
 
-    if (selectedCoin) {
-      fetchSentimentData();
-    } else {
+    if (selectedCoin === "market") {
       setSentimentData(defaultSentimentData);
       setLoading(false);
+    } else if (selectedCoin) {
+      fetchSentimentData();
     }
   }, [selectedCoin]);
 
@@ -90,7 +94,7 @@ export function MarketSentiment() {
             <SelectValue placeholder={coinsLoading ? "Loading coins..." : "Select coin"} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Overall Market</SelectItem>
+            <SelectItem value="market">Overall Market</SelectItem>
             {availableCoins.map((coin) => (
               <SelectItem key={coin} value={coin}>
                 {coin}
@@ -108,7 +112,7 @@ export function MarketSentiment() {
             </div>
             <Progress 
               value={sentiment.value} 
-              className={`${sentiment.color} ${loading && selectedCoin ? 'opacity-50' : ''}`} 
+              className={`${sentiment.color} ${loading && selectedCoin !== "market" ? 'opacity-50' : ''}`} 
             />
           </div>
         ))}
