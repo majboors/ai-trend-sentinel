@@ -78,7 +78,7 @@ export type Database = {
           exit_price: number | null
           id: string
           profit_loss: number | null
-          status: string
+          status: Database["public"]["Enums"]["trade_status"]
           symbol: string
           type: string
           user_id: string
@@ -92,7 +92,7 @@ export type Database = {
           exit_price?: number | null
           id?: string
           profit_loss?: number | null
-          status: string
+          status: Database["public"]["Enums"]["trade_status"]
           symbol: string
           type: string
           user_id: string
@@ -106,7 +106,7 @@ export type Database = {
           exit_price?: number | null
           id?: string
           profit_loss?: number | null
-          status?: string
+          status?: Database["public"]["Enums"]["trade_status"]
           symbol?: string
           type?: string
           user_id?: string

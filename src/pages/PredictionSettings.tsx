@@ -23,8 +23,22 @@ export default function PredictionSettings() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchViews();
+    checkAuthAndFetchViews();
   }, []);
+
+  const checkAuthAndFetchViews = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to access prediction settings",
+        variant: "destructive",
+      });
+      navigate('/'); // Redirect to home or login page
+      return;
+    }
+    fetchViews();
+  };
 
   const fetchViews = async () => {
     try {
@@ -58,10 +72,16 @@ export default function PredictionSettings() {
     setLoading(true);
     try {
       // Get the current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!user) {
-        throw new Error("No authenticated user found");
+      if (!session?.user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to create predictions",
+          variant: "destructive",
+        });
+        navigate('/'); // Redirect to home or login page
+        return;
       }
 
       const { data, error } = await supabase
@@ -71,8 +91,8 @@ export default function PredictionSettings() {
           start_date: startDate,
           initial_amount: parseFloat(initialAmount),
           current_amount: parseFloat(initialAmount),
-          status: 'active' as const, // Explicitly type as 'active'
-          user_id: user.id // Add the user_id
+          status: 'active' as const,
+          user_id: session.user.id
         })
         .select()
         .single();
@@ -98,7 +118,7 @@ export default function PredictionSettings() {
       console.error('Error creating view:', error);
       toast({
         title: "Error",
-        description: "Failed to create prediction view",
+        description: "Failed to create prediction view. Please ensure you're signed in.",
         variant: "destructive",
       });
     } finally {
