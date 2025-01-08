@@ -142,7 +142,7 @@ export default function ProfitPredictions() {
           amount,
           profit_loss: profitLoss,
           type,
-          status: 'OPEN',
+          status: 'open', // Changed to lowercase 'open' to match the database constraint
           closed_at: null // Don't set closed_at for open trades
         });
 
