@@ -227,7 +227,10 @@ export function TradingSuggestions() {
         )
       )}
 
-      <LiveAnalysisSidebar isOpen={isLiveAnalysisOpen} />
+      <LiveAnalysisSidebar 
+        isOpen={isLiveAnalysisOpen} 
+        onClose={() => setIsLiveAnalysisOpen(false)}
+      />
     </div>
   );
 }
