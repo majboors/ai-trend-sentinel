@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 
 interface SentimentData {
   type: string;
@@ -11,6 +12,7 @@ interface SentimentData {
 
 interface MarketSentimentProps {
   onSentimentChange?: (sentimentData: SentimentData[]) => void;
+  selectedCoin?: string;
 }
 
 const defaultSentimentData: SentimentData[] = [
@@ -19,12 +21,13 @@ const defaultSentimentData: SentimentData[] = [
   { type: "Negative", value: 10, color: "bg-red-500" },
 ];
 
-export function MarketSentiment({ onSentimentChange }: MarketSentimentProps) {
-  const [selectedCoin, setSelectedCoin] = useState<string>("market");
+export function MarketSentiment({ onSentimentChange, selectedCoin }: MarketSentimentProps) {
+  const [currentCoin, setCurrentCoin] = useState<string>("market");
   const [availableCoins, setAvailableCoins] = useState<string[]>([]);
   const [sentimentData, setSentimentData] = useState<SentimentData[]>(defaultSentimentData);
   const [loading, setLoading] = useState(false);
   const [coinsLoading, setCoinsLoading] = useState(true);
+  const { toast } = useToast();
 
   // Fetch available coins
   useEffect(() => {
@@ -40,16 +43,26 @@ export function MarketSentiment({ onSentimentChange }: MarketSentimentProps) {
             typeof coin === 'string' && coin.length > 0 && !coin.includes(' ')
           );
           setAvailableCoins(validCoins);
+          
+          // If we have a selectedCoin, try to find it in the available coins
+          if (selectedCoin && validCoins.includes(selectedCoin)) {
+            setCurrentCoin(selectedCoin);
+          }
         }
       } catch (error) {
         console.error('Error fetching coins:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch available coins",
+          variant: "destructive",
+        });
       } finally {
         setCoinsLoading(false);
       }
     };
 
     fetchCoins();
-  }, []);
+  }, [selectedCoin, toast]);
 
   // Calculate sentiment percentages from video data
   const calculateSentimentPercentages = (videos: any) => {
@@ -101,14 +114,14 @@ export function MarketSentiment({ onSentimentChange }: MarketSentimentProps) {
   // Fetch sentiment data when coin is selected
   useEffect(() => {
     const fetchSentimentData = async () => {
-      if (!selectedCoin || selectedCoin === "market") {
+      if (!currentCoin || currentCoin === "market") {
         setSentimentData(defaultSentimentData);
         return;
       }
       
       try {
         setLoading(true);
-        const response = await fetch(`https://crypto.techrealm.pk/coin/${selectedCoin}`);
+        const response = await fetch(`https://crypto.techrealm.pk/coin/${currentCoin}`);
         if (!response.ok) {
           throw new Error('Failed to fetch sentiment data');
         }
@@ -122,6 +135,11 @@ export function MarketSentiment({ onSentimentChange }: MarketSentimentProps) {
         }
       } catch (error) {
         console.error('Error fetching sentiment data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch sentiment data",
+          variant: "destructive",
+        });
         setSentimentData(defaultSentimentData);
       } finally {
         setLoading(false);
@@ -129,13 +147,17 @@ export function MarketSentiment({ onSentimentChange }: MarketSentimentProps) {
     };
 
     fetchSentimentData();
-  }, [selectedCoin]);
+  }, [currentCoin, toast]);
 
   return (
     <Card className="glass-card p-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-sm font-medium text-muted-foreground">Market Sentiment</h3>
-        <Select value={selectedCoin} onValueChange={setSelectedCoin} disabled={coinsLoading}>
+        <Select 
+          value={currentCoin} 
+          onValueChange={setCurrentCoin} 
+          disabled={coinsLoading}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder={coinsLoading ? "Loading coins..." : "Select coin"} />
           </SelectTrigger>
@@ -158,7 +180,7 @@ export function MarketSentiment({ onSentimentChange }: MarketSentimentProps) {
             </div>
             <Progress 
               value={sentiment.value} 
-              className={`${sentiment.color} ${loading && selectedCoin !== "market" ? 'opacity-50' : ''}`} 
+              className={`${sentiment.color} ${loading && currentCoin !== "market" ? 'opacity-50' : ''}`} 
             />
           </div>
         ))}

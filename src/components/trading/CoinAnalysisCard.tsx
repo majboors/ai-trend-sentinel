@@ -4,6 +4,7 @@ import { ArrowRight, TrendingUp, TrendingDown } from "lucide-react";
 import { MarketSentiment } from "@/components/dashboard/MarketSentiment";
 import { CoinChart } from "./CoinChart";
 import type { CoinData, Strategy } from "./types";
+import { useToast } from "@/components/ui/use-toast";
 
 interface CoinAnalysisCardProps {
   coin: CoinData;
@@ -12,6 +13,8 @@ interface CoinAnalysisCardProps {
 }
 
 export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps) {
+  const { toast } = useToast();
+
   const determineStrategy = (sentimentData: any): Strategy => {
     if (!sentimentData || !Array.isArray(sentimentData)) {
       return coin.strategy;
@@ -36,7 +39,8 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
       return "do not buy";
     }
 
-    return coin.strategy;
+    // If none of the conditions are met
+    return "hold";
   };
 
   const getStrategyColor = (strategy: Strategy): string => {
@@ -51,6 +55,20 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
       default:
         return "text-yellow-500";
     }
+  };
+
+  // Extract base asset from symbol (e.g., "APT" from "APT/JPY")
+  const extractBaseAsset = (symbol: string): string => {
+    const baseAsset = symbol.split('/')[0];
+    if (!baseAsset) {
+      toast({
+        title: "Error",
+        description: "Could not extract base asset from symbol",
+        variant: "destructive",
+      });
+      return symbol;
+    }
+    return baseAsset;
   };
 
   return (
@@ -83,6 +101,7 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
 
       <div className="p-4 bg-card/30 rounded-lg">
         <MarketSentiment 
+          selectedCoin={extractBaseAsset(`${coin.baseAsset}/${coin.quoteAsset}`)}
           onSentimentChange={(sentimentData) => {
             const newStrategy = determineStrategy(sentimentData);
             if (newStrategy !== coin.strategy) {
