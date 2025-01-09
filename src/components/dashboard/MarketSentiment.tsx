@@ -27,6 +27,7 @@ export function MarketSentiment({ onSentimentChange, selectedCoin }: MarketSenti
   const [sentimentData, setSentimentData] = useState<SentimentData[]>(defaultSentimentData);
   const [loading, setLoading] = useState(false);
   const [coinsLoading, setCoinsLoading] = useState(true);
+  const [dataFetched, setDataFetched] = useState(false);
   const { toast } = useToast();
 
   // Fetch available coins
@@ -104,23 +105,53 @@ export function MarketSentiment({ onSentimentChange, selectedCoin }: MarketSenti
     ];
   };
 
-  // Update parent component when sentiment data changes
-  useEffect(() => {
-    if (onSentimentChange) {
-      onSentimentChange(sentimentData);
+  const determineStrategy = (sentimentData: SentimentData[]) => {
+    const neutral = sentimentData.find(s => s.type === "Neutral")?.value || 0;
+    const positive = sentimentData.find(s => s.type === "Positive")?.value || 0;
+    const negative = sentimentData.find(s => s.type === "Negative")?.value || 0;
+
+    // First priority: Check neutral sentiment
+    if (neutral > 50) {
+      return "COIN IS DEAD";
     }
-  }, [sentimentData, onSentimentChange]);
+    
+    // Second priority: Check negative sentiment
+    if (negative > 10) {
+      return "do not buy";
+    }
+    
+    // Third priority: Check positive sentiment
+    if (positive > 20) {
+      return "buy";
+    }
+
+    // If none of the conditions are met
+    return "hold";
+  };
+
+  // Update parent component when sentiment data changes and data is fetched
+  useEffect(() => {
+    if (onSentimentChange && dataFetched) {
+      const strategy = determineStrategy(sentimentData);
+      onSentimentChange(sentimentData.map(data => ({
+        ...data,
+        strategy
+      })));
+    }
+  }, [sentimentData, onSentimentChange, dataFetched]);
 
   // Fetch sentiment data when coin is selected
   useEffect(() => {
     const fetchSentimentData = async () => {
       if (!currentCoin || currentCoin === "market") {
         setSentimentData(defaultSentimentData);
+        setDataFetched(true);
         return;
       }
       
       try {
         setLoading(true);
+        setDataFetched(false);
         const response = await fetch(`https://crypto.techrealm.pk/coin/${currentCoin}`);
         if (!response.ok) {
           throw new Error('Failed to fetch sentiment data');
@@ -143,6 +174,7 @@ export function MarketSentiment({ onSentimentChange, selectedCoin }: MarketSenti
         setSentimentData(defaultSentimentData);
       } finally {
         setLoading(false);
+        setDataFetched(true);
       }
     };
 
