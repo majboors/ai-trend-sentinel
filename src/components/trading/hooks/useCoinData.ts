@@ -61,15 +61,12 @@ function analyzeSentiment(sentimentData: any): {
   let othersCount = 0;
   let totalCount = 0;
 
-  // Analyze comments from all videos
   Object.values(sentimentData.videos).forEach((video: any) => {
-    // Count title sentiment
     if (video.title_label === 'buy') buyCount++;
     else if (video.title_label === 'sell') sellCount++;
     else othersCount++;
     totalCount++;
 
-    // Count comment sentiments
     if (video.comments && Array.isArray(video.comments)) {
       video.comments.forEach((comment: any) => {
         if (comment.indicator === 'buy') buyCount++;
@@ -80,13 +77,11 @@ function analyzeSentiment(sentimentData: any): {
     }
   });
 
-  // Calculate percentages
-  const total = totalCount || 1; // Prevent division by zero
+  const total = totalCount || 1;
   const neutral = Math.round((othersCount / total) * 100);
   const positive = Math.round((buyCount / total) * 100);
   const negative = Math.round((sellCount / total) * 100);
 
-  // Determine strategy based on sentiment
   let strategy: Strategy;
   if (neutral > 50) {
     strategy = "COIN IS DEAD";
@@ -104,6 +99,12 @@ function analyzeSentiment(sentimentData: any): {
   };
 }
 
+interface BinancePairsOptions {
+  includeKlines: boolean;
+  interval: string;
+  limit: string;
+}
+
 export function useCoinData() {
   return useQuery({
     queryKey: ['trading-coins'],
@@ -113,15 +114,17 @@ export function useCoinData() {
         if (!session) throw new Error('No authenticated session found');
 
         console.log('Fetching coin data from Edge Function...');
+        const options: BinancePairsOptions = {
+          includeKlines: true,
+          interval: '1h',
+          limit: '100'  // Changed from number to string to match expected type
+        };
+
         const response = await supabase.functions.invoke('fetch-binance-pairs', {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: {
-            includeKlines: true,
-            interval: '1h',
-            limit: '100'  // Changed from number to string to match expected type
-          }
+          body: options
         });
 
         if (response.error) {
@@ -134,7 +137,6 @@ export function useCoinData() {
           throw new Error('Invalid response data from API');
         }
 
-        // Fetch sentiment data for each coin
         const coinsWithSentiment = await Promise.all(
           response.data.map(async (coinData: CoinData) => {
             const sentimentData = await fetchSentimentData(coinData.baseAsset);
