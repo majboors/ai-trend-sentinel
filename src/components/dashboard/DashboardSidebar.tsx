@@ -81,12 +81,12 @@ export function DashboardSidebar() {
 
   return (
     <Sidebar>
-      <div className="flex items-center p-2">
-        <SidebarTrigger onClick={toggleSidebar} />
-      </div>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <div className="flex items-center justify-between p-4">
+            <span className="text-lg font-semibold">Navigation</span>
+            <SidebarTrigger onClick={toggleSidebar} />
+          </div>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
