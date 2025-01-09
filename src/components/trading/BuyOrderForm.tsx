@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -39,6 +39,15 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
   )?.free || 0;
 
   const maxAmount = availableBalance / currentPrice;
+
+  // Auto-adjust leverage when amount exceeds available balance
+  useEffect(() => {
+    const requiredLeverage = Math.ceil(amount / maxAmount);
+    if (requiredLeverage > 1) {
+      setLeverage(Math.min(requiredLeverage, 10)); // Cap at max leverage of 10
+    }
+  }, [amount, maxAmount]);
+
   const leveragedAmount = amount * leverage;
   const loanedAmount = leveragedAmount - amount;
   const depth = (leveragedAmount * currentPrice) / availableBalance;
@@ -50,6 +59,15 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
     const percentage = values[0];
     const calculatedAmount = (maxAmount * percentage) / 100;
     setAmount(calculatedAmount);
+  };
+
+  const handleAmountChange = (value: number) => {
+    setAmount(value);
+    // Auto-adjust leverage if amount exceeds available balance
+    if (value > maxAmount) {
+      const newLeverage = Math.min(Math.ceil(value / maxAmount), 10);
+      setLeverage(newLeverage);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,6 +133,13 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
 
         <div className="space-y-4">
           <div className="flex justify-between items-center">
+            <Label>Current Price</Label>
+            <span className="text-sm font-medium">
+              {currentPrice.toFixed(2)} {baseAsset}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center">
             <Label>Available Balance</Label>
             <span className="text-sm font-medium">
               {availableBalance.toFixed(2)} {baseAsset}
@@ -138,9 +163,8 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
             <Input
               type="number"
               value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
+              onChange={(e) => handleAmountChange(Number(e.target.value))}
               min={0}
-              max={maxAmount}
               step="0.0001"
               className="mt-2"
             />
