@@ -12,11 +12,11 @@ interface QueuedNotification {
 let notificationQueue: QueuedNotification[] = [];
 let isProcessingQueue = false;
 let lastNotificationTime = 0;
-const RATE_LIMIT_WINDOW = 60000; // Increased to 60 seconds between notifications
+const RATE_LIMIT_WINDOW = 60000; // 60 seconds between notifications
 const MAX_RETRIES = 3;
-const MAX_QUEUE_SIZE = 25; // Reduced queue size for better management
+const MAX_QUEUE_SIZE = 25;
 const MIN_PERCENTAGE_CHANGE = 5; // Only notify for 5% or greater changes
-const NOTIFICATION_COOLDOWN: Record<string, number> = {}; // Track last notification time per coin
+const NOTIFICATION_COOLDOWN: Record<string, number> = {};
 
 const storeNotification = async (notification: QueuedNotification) => {
   const { data: { session } } = await supabase.auth.getSession();
