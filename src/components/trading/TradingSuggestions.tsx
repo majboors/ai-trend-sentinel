@@ -11,6 +11,7 @@ import { useCoinData } from "./hooks/useCoinData";
 import { Button } from "@/components/ui/button";
 import { LineChart } from "lucide-react";
 import type { TradeViewState } from "./types";
+import { useQuery } from "@tanstack/react-query";
 
 export function TradingSuggestions() {
   const [started, setStarted] = useState(false);
@@ -25,8 +26,24 @@ export function TradingSuggestions() {
     coins: [],
   });
 
-  const { data: coins = [], isLoading, error } = useCoinData();
-  const currentCoin = coins[tradeView.currentIndex];
+  const { data: coins = [], isLoading: isCoinsLoading, error: coinsError } = useCoinData();
+  
+  // Fetch available assets
+  const { data: assets = [], isLoading: isAssetsLoading } = useQuery({
+    queryKey: ['assets'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('assets')
+        .select('*')
+        .eq('user_id', session.user.id);
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const handleStart = () => {
     setIsTradeNameDialogOpen(true);
@@ -180,18 +197,18 @@ export function TradingSuggestions() {
     );
   }
 
-  if (isLoading) {
+  if (isCoinsLoading || isAssetsLoading) {
     return (
       <div className="glass-card p-8 flex items-center justify-center min-h-[60vh]">
-        <p className="text-lg text-muted-foreground">Loading coins...</p>
+        <p className="text-lg text-muted-foreground">Loading...</p>
       </div>
     );
   }
 
-  if (error) {
+  if (coinsError) {
     return (
       <div className="glass-card p-8 flex items-center justify-center min-h-[60vh]">
-        <p className="text-lg text-red-500">Error: {error.message}</p>
+        <p className="text-lg text-red-500">Error: {coinsError.message}</p>
       </div>
     );
   }
@@ -218,6 +235,7 @@ export function TradingSuggestions() {
             currentIndex={tradeView.currentIndex}
             total={coins.length}
             tradeViewId={tradeView.id}
+            availableAssets={assets}
           />
         )
       )}

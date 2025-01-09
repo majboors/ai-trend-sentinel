@@ -9,6 +9,7 @@ import { useState } from "react";
 import { AnalysisProgress } from "./AnalysisProgress";
 import { LiveAnalysisSidebar } from "./analysis/LiveAnalysisSidebar";
 import { NotificationControls } from "./NotificationControls";
+import { BuyOrderForm } from "./BuyOrderForm";
 
 interface CoinAnalysisCardProps {
   coin: CoinData;
@@ -17,6 +18,7 @@ interface CoinAnalysisCardProps {
   currentIndex: number;
   total: number;
   tradeViewId?: string;
+  availableAssets?: Array<{ symbol: string; free: number; }>;
 }
 
 export function CoinAnalysisCard({ 
@@ -25,7 +27,8 @@ export function CoinAnalysisCard({
   onBuy, 
   currentIndex, 
   total,
-  tradeViewId 
+  tradeViewId,
+  availableAssets = []
 }: CoinAnalysisCardProps) {
   const { toast } = useToast();
   const [isStrategyLoading, setIsStrategyLoading] = useState(true);
@@ -105,6 +108,12 @@ export function CoinAnalysisCard({
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <CoinChart coin={coin} />
+        <BuyOrderForm
+          symbol={coin.symbol}
+          currentPrice={parseFloat(coin.lastPrice.toString())}
+          availableAssets={availableAssets}
+          onSuccess={onBuy}
+        />
       </div>
 
       {/* Market Sentiment and Strategy Section */}

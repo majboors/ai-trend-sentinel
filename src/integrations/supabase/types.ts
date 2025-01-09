@@ -69,6 +69,57 @@ export type Database = {
         }
         Relationships: []
       }
+      buy_orders: {
+        Row: {
+          amount: number
+          created_at: string | null
+          entry_price: number
+          filled_at: string | null
+          id: string
+          ip_address: string
+          leverage: number | null
+          profit_loss: number | null
+          sold_at: string | null
+          status: Database["public"]["Enums"]["order_status"] | null
+          stop_loss_price: number
+          symbol: string
+          target_price: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          entry_price: number
+          filled_at?: string | null
+          id?: string
+          ip_address: string
+          leverage?: number | null
+          profit_loss?: number | null
+          sold_at?: string | null
+          status?: Database["public"]["Enums"]["order_status"] | null
+          stop_loss_price: number
+          symbol: string
+          target_price: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          entry_price?: number
+          filled_at?: string | null
+          id?: string
+          ip_address?: string
+          leverage?: number | null
+          profit_loss?: number | null
+          sold_at?: string | null
+          status?: Database["public"]["Enums"]["order_status"] | null
+          stop_loss_price?: number
+          symbol?: string
+          target_price?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       coin_indicators: {
         Row: {
           coin_symbol: string
@@ -433,6 +484,7 @@ export type Database = {
     Enums: {
       account_type: "spot" | "margin"
       notification_status: "pending" | "sent" | "failed"
+      order_status: "pending" | "filled" | "cancelled" | "auto_sold"
       prediction_status: "active" | "completed" | "cancelled"
       trade_status: "open" | "closed" | "cancelled"
       whale_trade_type: "buy" | "sell"
