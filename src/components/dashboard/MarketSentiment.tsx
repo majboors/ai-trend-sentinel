@@ -3,23 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-
-interface SentimentData {
-  type: string;
-  value: number;
-  color: string;
-}
-
-interface MarketSentimentProps {
-  onSentimentChange?: (sentimentData: SentimentData[]) => void;
-  selectedCoin?: string;
-}
-
-const defaultSentimentData: SentimentData[] = [
-  { type: "Positive", value: 70, color: "bg-green-500" },
-  { type: "Neutral", value: 20, color: "bg-yellow-500" },
-  { type: "Negative", value: 10, color: "bg-red-500" },
-];
+import { defaultSentimentData, calculateSentimentPercentages, determineStrategy } from "./utils/sentimentCalculations";
+import type { MarketSentimentProps, SentimentData } from "./types/sentiment";
 
 export function MarketSentiment({ onSentimentChange, selectedCoin }: MarketSentimentProps) {
   const [currentCoin, setCurrentCoin] = useState<string>("market");
@@ -64,70 +49,6 @@ export function MarketSentiment({ onSentimentChange, selectedCoin }: MarketSenti
 
     fetchCoins();
   }, [selectedCoin, toast]);
-
-  // Calculate sentiment percentages from video data
-  const calculateSentimentPercentages = (videos: any) => {
-    let buyCount = 0;
-    let sellCount = 0;
-    let othersCount = 0;
-    let totalCount = 0;
-
-    // Count sentiments from comments
-    Object.values(videos).forEach((video: any) => {
-      if (video.comments && Array.isArray(video.comments)) {
-        video.comments.forEach((comment: any) => {
-          if (comment.indicator === 'buy') buyCount++;
-          else if (comment.indicator === 'sell') sellCount++;
-          else if (comment.indicator === 'others') othersCount++;
-          totalCount++;
-        });
-      }
-
-      // Add title sentiment if available
-      if (video.title_label === 'buy') {
-        buyCount++;
-        totalCount++;
-      } else if (video.title_label === 'sell') {
-        sellCount++;
-        totalCount++;
-      } else if (video.title_label === 'others') {
-        othersCount++;
-        totalCount++;
-      }
-    });
-
-    // Calculate percentages
-    const total = totalCount || 1; // Prevent division by zero
-    return [
-      { type: "Positive", value: Math.round((buyCount / total) * 100), color: "bg-green-500" },
-      { type: "Neutral", value: Math.round((othersCount / total) * 100), color: "bg-yellow-500" },
-      { type: "Negative", value: Math.round((sellCount / total) * 100), color: "bg-red-500" },
-    ];
-  };
-
-  const determineStrategy = (sentimentData: SentimentData[]) => {
-    const neutral = sentimentData.find(s => s.type === "Neutral")?.value || 0;
-    const positive = sentimentData.find(s => s.type === "Positive")?.value || 0;
-    const negative = sentimentData.find(s => s.type === "Negative")?.value || 0;
-
-    // First priority: Check neutral sentiment
-    if (neutral > 50) {
-      return "COIN IS DEAD";
-    }
-    
-    // Second priority: Check negative sentiment
-    if (negative > 10) {
-      return "do not buy";
-    }
-    
-    // Third priority: Check positive sentiment
-    if (positive > 20) {
-      return "buy";
-    }
-
-    // If none of the conditions are met
-    return "hold";
-  };
 
   // Update parent component when sentiment data changes and data is fetched
   useEffect(() => {
@@ -174,7 +95,10 @@ export function MarketSentiment({ onSentimentChange, selectedCoin }: MarketSenti
         setSentimentData(defaultSentimentData);
       } finally {
         setLoading(false);
-        setDataFetched(true);
+        // Only set dataFetched to true after a small delay to ensure graph rendering
+        setTimeout(() => {
+          setDataFetched(true);
+        }, 500);
       }
     };
 
