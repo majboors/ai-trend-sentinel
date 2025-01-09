@@ -1,5 +1,4 @@
 import { ViewTypeSelector } from "../ViewTypeSelector";
-import { AnalysisProgress } from "../AnalysisProgress";
 
 interface AnalysisHeaderProps {
   viewType: string;
@@ -10,9 +9,7 @@ interface AnalysisHeaderProps {
 
 export function AnalysisHeader({ 
   viewType, 
-  onViewTypeChange, 
-  currentIndex, 
-  total 
+  onViewTypeChange,
 }: AnalysisHeaderProps) {
   return (
     <div className="space-y-6 mb-8">
@@ -20,7 +17,6 @@ export function AnalysisHeader({
         <h2 className="text-2xl font-semibold text-foreground/90">Trading Analysis</h2>
         <ViewTypeSelector value={viewType} onValueChange={onViewTypeChange} />
       </div>
-      <AnalysisProgress currentIndex={currentIndex} total={total} />
     </div>
   );
 }
