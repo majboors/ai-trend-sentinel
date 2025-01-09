@@ -11,9 +11,10 @@ export function LiveAnalysisSidebar({ isOpen, onClose }: LiveAnalysisSidebarProp
   return (
     <div
       className={cn(
-        "fixed inset-y-0 right-0 w-80 bg-sidebar border-l border-sidebar-border transform transition-transform duration-200 ease-in-out z-50",
+        "fixed top-0 bottom-0 right-0 w-80 bg-sidebar border-l border-sidebar-border transform transition-transform duration-200 ease-in-out z-50 shadow-xl",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}
+      style={{ margin: 0 }}
     >
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
