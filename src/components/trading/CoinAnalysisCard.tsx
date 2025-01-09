@@ -4,10 +4,11 @@ import { ArrowRight, LineChart, TrendingUp, TrendingDown } from "lucide-react";
 import { MarketSentiment } from "@/components/dashboard/MarketSentiment";
 import { CoinChart } from "./CoinChart";
 import type { CoinData, Strategy } from "./types";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { AnalysisProgress } from "./AnalysisProgress";
 import { LiveAnalysisSidebar } from "./analysis/LiveAnalysisSidebar";
+import { NotificationControls } from "./NotificationControls";
 
 interface CoinAnalysisCardProps {
   coin: CoinData;
@@ -74,6 +75,10 @@ export function CoinAnalysisCard({ coin, onNext, onBuy, currentIndex, total }: C
             <Card className="bg-card/30 p-4 border-white/5">
               <div className="space-y-4">
                 <AnalysisProgress currentIndex={currentIndex} total={total} />
+                <NotificationControls 
+                  coin={coin.symbol}
+                  currentPrice={parseFloat(coin.lastPrice.toString())}
+                />
                 <Button
                   variant="outline"
                   className="w-full gap-2"
