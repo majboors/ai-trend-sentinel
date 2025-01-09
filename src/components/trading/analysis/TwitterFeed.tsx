@@ -123,15 +123,15 @@ export function TwitterFeed({ coinSymbol }: TwitterFeedProps) {
     }
 
     return tweets.map((tweet) => (
-      <Card key={tweet.tweet_id} className="bg-card mb-4">
+      <Card key={tweet.tweet_id} className="mb-4 bg-card/50 backdrop-blur-sm">
         <CardContent className="p-4">
           <div className="flex flex-col space-y-2">
             <div className="flex items-center space-x-2">
-              <span className="font-bold">{tweet.name}</span>
-              <span className="text-muted-foreground">@{tweet.username}</span>
+              <span className="font-bold text-sm">{tweet.name}</span>
+              <span className="text-muted-foreground text-sm">@{tweet.username}</span>
             </div>
-            <p className="text-sm">{tweet.text}</p>
-            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+            <p className="text-sm break-words whitespace-pre-wrap">{tweet.text}</p>
+            <div className="flex items-center space-x-4 text-xs text-muted-foreground">
               <span>❤️ {tweet.likes}</span>
               <span>🔁 {tweet.retweets}</span>
               <span>💬 {tweet.replies}</span>
@@ -143,13 +143,15 @@ export function TwitterFeed({ coinSymbol }: TwitterFeedProps) {
   };
 
   return (
-    <Tabs defaultValue="buy" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="buy">Buy</TabsTrigger>
-        <TabsTrigger value="sell">Sell</TabsTrigger>
-        <TabsTrigger value="analysis">Analysis</TabsTrigger>
-      </TabsList>
-      <ScrollArea className="h-[calc(100vh-10rem)]">
+    <Tabs defaultValue="buy" className="w-full h-full flex flex-col">
+      <div className="sticky top-0 z-10 bg-sidebar border-b border-sidebar-border">
+        <TabsList className="w-full grid grid-cols-3">
+          <TabsTrigger value="buy">Buy</TabsTrigger>
+          <TabsTrigger value="sell">Sell</TabsTrigger>
+          <TabsTrigger value="analysis">Analysis</TabsTrigger>
+        </TabsList>
+      </div>
+      <ScrollArea className="flex-1">
         <div className="p-4">
           <TabsContent value="buy" className="mt-0">
             {renderTweets(buyTweets)}
