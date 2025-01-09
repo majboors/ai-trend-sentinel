@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { CoinData, Coin } from "../types";
+import type { CoinData, Coin, Strategy } from "../types";
 
 function calculateMA(prices: number[], period: number): number {
   if (prices.length === 0) return 0;
@@ -30,36 +30,70 @@ function calculateRSI(prices: number[], period: number = 14): number {
   return 100 - (100 / (1 + rs));
 }
 
-function generateAnalysis(coin: CoinData): string {
-  const { rsi, ma7, ma25, ma99 } = coin.indicators;
-  let analysis = '';
-
-  if (rsi > 70) {
-    analysis += 'Overbought conditions. ';
-  } else if (rsi < 30) {
-    analysis += 'Oversold conditions. ';
+async function fetchSentimentData(symbol: string) {
+  try {
+    const response = await fetch(`https://crypto.techrealm.pk/coin/${symbol}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch sentiment data');
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching sentiment data:', error);
+    return null;
   }
-
-  if (ma7 > ma25) {
-    analysis += 'Short-term uptrend. ';
-  } else {
-    analysis += 'Short-term downtrend. ';
-  }
-
-  if (ma25 > ma99) {
-    analysis += 'Long-term bullish.';
-  } else {
-    analysis += 'Long-term bearish.';
-  }
-
-  return analysis;
 }
 
-function determineSentiment(rsi: number): string {
-  if (rsi > 70) return "overbought";
-  if (rsi < 30) return "oversold";
-  if (rsi > 50) return "bullish";
-  return "bearish";
+function analyzeSentiment(sentimentData: any): { 
+  strategy: Strategy, 
+  sentiment: { neutral: number; positive: number; negative: number; }
+} {
+  if (!sentimentData || !sentimentData.videos) {
+    return {
+      strategy: "hold",
+      sentiment: { neutral: 33, positive: 33, negative: 34 }
+    };
+  }
+
+  let buyCount = 0;
+  let sellCount = 0;
+  let othersCount = 0;
+  let totalCount = 0;
+
+  // Analyze comments from all videos
+  Object.values(sentimentData.videos).forEach((video: any) => {
+    if (video.comments && Array.isArray(video.comments)) {
+      video.comments.forEach((comment: any) => {
+        if (comment.indicator === 'buy') buyCount++;
+        else if (comment.indicator === 'sell') sellCount++;
+        else othersCount++;
+        totalCount++;
+      });
+    }
+  });
+
+  // Calculate percentages
+  const total = totalCount || 1; // Prevent division by zero
+  const neutral = Math.round((othersCount / total) * 100);
+  const positive = Math.round((buyCount / total) * 100);
+  const negative = Math.round((sellCount / total) * 100);
+
+  // Determine strategy based on sentiment
+  let strategy: Strategy;
+  if (neutral > 50) {
+    strategy = "COIN IS DEAD";
+  } else if (positive > 20) {
+    strategy = "buy";
+  } else if (negative > 10) {
+    strategy = "sell";
+  } else {
+    strategy = "hold";
+  }
+
+  return {
+    strategy,
+    sentiment: { neutral, positive, negative }
+  };
 }
 
 export function useCoinData() {
@@ -78,7 +112,7 @@ export function useCoinData() {
           body: {
             includeKlines: true,
             interval: '1h',
-            limit: '100'  // Changed from number to string to match expected type
+            limit: '100'  // Changed from number to string to fix type error
           }
         });
 
@@ -92,40 +126,40 @@ export function useCoinData() {
           throw new Error('Invalid response data from API');
         }
 
-        console.log('Successfully fetched coin data:', response.data);
+        // Fetch sentiment data for each coin
+        const coinsWithSentiment = await Promise.all(
+          response.data.map(async (coinData: CoinData) => {
+            const sentimentData = await fetchSentimentData(coinData.baseAsset);
+            const { strategy, sentiment } = analyzeSentiment(sentimentData);
 
-        return response.data.map((coinData: CoinData): Coin => {
-          const klines = Array.isArray(coinData.klines) ? coinData.klines : [];
-          const prices = klines
-            .filter((k: any) => k && k.close)
-            .map((k: any) => parseFloat(k.close));
+            const klines = Array.isArray(coinData.klines) ? coinData.klines : [];
+            const prices = klines
+              .filter((k: any) => k && k.close)
+              .map((k: any) => parseFloat(k.close));
 
-          const rsi = calculateRSI(prices);
-          const ma7 = calculateMA(prices, 7);
-          const ma25 = calculateMA(prices, 25);
-          const ma99 = calculateMA(prices, 99);
+            const rsi = calculateRSI(prices);
+            const ma7 = calculateMA(prices, 7);
+            const ma25 = calculateMA(prices, 25);
+            const ma99 = calculateMA(prices, 99);
 
-          return {
-            ...coinData,
-            price: parseFloat(coinData.lastPrice),
-            priceChange: coinData.priceChangePercent,
-            analysis: generateAnalysis({
+            return {
               ...coinData,
-              indicators: { rsi, ma7, ma25, ma99 }
-            }),
-            sentiment: {
-              neutral: Math.abs(50 - rsi),
-              positive: rsi > 70 ? 100 : rsi > 50 ? 75 : 25,
-              negative: rsi < 30 ? 100 : rsi < 50 ? 75 : 25
-            },
-            indicators: {
-              rsi,
-              ma7,
-              ma25,
-              ma99,
-            },
-          };
-        });
+              price: parseFloat(coinData.lastPrice),
+              priceChange: coinData.priceChangePercent,
+              strategy,
+              analysis: `${strategy.toUpperCase()} - RSI: ${Math.round(rsi)}`,
+              sentiment,
+              indicators: {
+                rsi,
+                ma7,
+                ma25,
+                ma99,
+              },
+            };
+          })
+        );
+
+        return coinsWithSentiment;
       } catch (error) {
         console.error('Error in useCoinData:', error);
         throw error;
