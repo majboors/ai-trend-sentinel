@@ -22,12 +22,12 @@ interface BuyOrderFormProps {
 export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess }: BuyOrderFormProps) {
   const { toast } = useToast();
   const [amount, setAmount] = useState<number>(0);
-  const [targetProfit, setTargetProfit] = useState<number>(5); // Default 5% profit target
+  const [targetProfit, setTargetProfit] = useState<number>(5);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const targetPrice = currentPrice * (1 + targetProfit / 100);
-  const stopLossPrice = currentPrice - 2 / amount; // $2 fixed stop loss
+  const stopLossPrice = currentPrice - 2 / amount;
 
   const quoteAsset = symbol.replace(/BTC$|USDT$|ETH$/, "");
   const baseAsset = symbol.includes("USDT") ? "USDT" : symbol.includes("BTC") ? "BTC" : "ETH";
@@ -36,23 +36,28 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
     asset => asset.symbol === baseAsset
   )?.free || 0;
 
+  const maxAmount = availableBalance / currentPrice;
+
+  const handleSliderChange = (values: number[]) => {
+    const percentage = values[0];
+    const calculatedAmount = (maxAmount * percentage) / 100;
+    setAmount(calculatedAmount);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
-      // Get user's IP address
       const { data: ipData, error: ipError } = await supabase.functions.invoke('fetch-ip');
       if (ipError) throw ipError;
 
-      // Get user session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error("You must be logged in to place orders");
       }
 
-      // Create buy order
       const { error: orderError } = await supabase
         .from('buy_orders')
         .insert({
@@ -63,7 +68,7 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
           stop_loss_price: stopLossPrice,
           amount,
           ip_address: ipData.ip,
-          leverage: 1, // Default leverage
+          leverage: 1,
           status: 'pending'
         });
 
@@ -91,7 +96,7 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
   };
 
   return (
-    <Card className="p-6">
+    <div className="p-6">
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
           <Alert variant="destructive">
@@ -100,19 +105,41 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
           </Alert>
         )}
 
-        <div className="space-y-2">
-          <Label>Amount ({quoteAsset})</Label>
-          <Input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
-            min={0}
-            step="0.0001"
-            placeholder={`Enter amount in ${quoteAsset}`}
-          />
-          <p className="text-sm text-muted-foreground">
-            Available: {availableBalance.toFixed(8)} {baseAsset}
-          </p>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <Label>Available Balance</Label>
+            <span className="text-sm font-medium">
+              {availableBalance.toFixed(8)} {baseAsset}
+            </span>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Purchase Amount ({quoteAsset})</Label>
+            <Slider
+              value={[amount ? (amount / maxAmount) * 100 : 0]}
+              onValueChange={handleSliderChange}
+              min={0}
+              max={100}
+              step={1}
+              className="my-4"
+            />
+            <div className="flex justify-between text-sm">
+              <span>0 {quoteAsset}</span>
+              <span>{maxAmount.toFixed(8)} {quoteAsset}</span>
+            </div>
+            <Input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              min={0}
+              max={maxAmount}
+              step="0.0001"
+              className="mt-2"
+            />
+            <p className="text-sm text-muted-foreground">
+              Cost: {(amount * currentPrice).toFixed(8)} {baseAsset}
+            </p>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -137,17 +164,10 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
           </p>
         </div>
 
-        <div className="space-y-2">
-          <Label>Leverage Available</Label>
-          <p className="text-sm text-muted-foreground">
-            Up to 10x leverage available for this pair
-          </p>
-        </div>
-
         <Button type="submit" className="w-full" disabled={isLoading || amount <= 0}>
           {isLoading ? "Placing Order..." : "Place Buy Order"}
         </Button>
       </form>
-    </Card>
+    </div>
   );
 }
