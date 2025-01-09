@@ -205,14 +205,6 @@ export function TradingSuggestions() {
           currentIndex={tradeView.currentIndex}
           total={coins.length}
         />
-        <Button
-          variant="outline"
-          className="gap-2"
-          onClick={() => setIsLiveAnalysisOpen(!isLiveAnalysisOpen)}
-        >
-          <LineChart className="h-4 w-4" />
-          Live Analysis
-        </Button>
       </div>
 
       {viewType === "volatile" ? (
@@ -223,6 +215,8 @@ export function TradingSuggestions() {
             coin={currentCoin}
             onNext={handleNext}
             onBuy={handleBuy}
+            currentIndex={tradeView.currentIndex}
+            total={coins.length}
           />
         )
       )}

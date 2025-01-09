@@ -64,14 +64,11 @@ export function CoinAnalysisCard({ coin, onNext, onBuy, currentIndex, total }: C
               </p>
             </div>
           </div>
-        </Card>
-
-        <Card className="p-6 bg-card/50 backdrop-blur-sm border-white/10">
-          <div className="flex justify-between items-center">
+          <div className="mt-4 space-y-4">
             <AnalysisProgress currentIndex={currentIndex} total={total} />
             <Button
               variant="outline"
-              className="gap-2"
+              className="w-full gap-2"
               onClick={() => setIsLiveAnalysisOpen(!isLiveAnalysisOpen)}
             >
               <LineChart className="h-4 w-4" />
