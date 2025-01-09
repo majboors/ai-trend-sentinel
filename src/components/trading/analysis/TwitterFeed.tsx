@@ -143,26 +143,24 @@ export function TwitterFeed({ coinSymbol }: TwitterFeedProps) {
   };
 
   return (
-    <div className="h-full">
+    <div className="h-full flex flex-col">
       <Tabs defaultValue="buy" className="h-full flex flex-col">
-        <TabsList className="w-full grid grid-cols-3 mb-4 px-4">
+        <TabsList className="w-full grid grid-cols-3 mb-4 px-4 sticky top-0 bg-sidebar z-10">
           <TabsTrigger value="buy">Buy</TabsTrigger>
           <TabsTrigger value="sell">Sell</TabsTrigger>
           <TabsTrigger value="analysis">Analysis</TabsTrigger>
         </TabsList>
         <div className="flex-1 overflow-hidden px-4">
-          <ScrollArea className="h-[calc(100vh-10rem)]">
-            <div className="space-y-4 pr-4">
-              <TabsContent value="buy" className="mt-0 space-y-4">
-                {renderTweets(buyTweets)}
-              </TabsContent>
-              <TabsContent value="sell" className="mt-0 space-y-4">
-                {renderTweets(sellTweets)}
-              </TabsContent>
-              <TabsContent value="analysis" className="mt-0 space-y-4">
-                {renderTweets(analysisTweets)}
-              </TabsContent>
-            </div>
+          <ScrollArea className="h-[calc(100vh-10rem)] pr-4">
+            <TabsContent value="buy" className="mt-0 space-y-4">
+              {renderTweets(buyTweets)}
+            </TabsContent>
+            <TabsContent value="sell" className="mt-0 space-y-4">
+              {renderTweets(sellTweets)}
+            </TabsContent>
+            <TabsContent value="analysis" className="mt-0 space-y-4">
+              {renderTweets(analysisTweets)}
+            </TabsContent>
           </ScrollArea>
         </div>
       </Tabs>
