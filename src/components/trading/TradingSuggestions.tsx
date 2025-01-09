@@ -8,8 +8,6 @@ import { StartAnalysisButton } from "./StartAnalysisButton";
 import { AnalysisHeader } from "./analysis/AnalysisHeader";
 import { LiveAnalysisSidebar } from "./analysis/LiveAnalysisSidebar";
 import { useCoinData } from "./hooks/useCoinData";
-import { Button } from "@/components/ui/button";
-import { LineChart } from "lucide-react";
 import type { TradeViewState } from "./types";
 import { useQuery } from "@tanstack/react-query";
 
@@ -44,6 +42,9 @@ export function TradingSuggestions() {
       return data || [];
     },
   });
+
+  // Define currentCoin based on tradeView state
+  const currentCoin = tradeView.coins[tradeView.currentIndex];
 
   const handleStart = () => {
     setIsTradeNameDialogOpen(true);
