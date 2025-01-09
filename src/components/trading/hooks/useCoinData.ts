@@ -32,6 +32,7 @@ function calculateRSI(prices: number[], period: number = 14): number {
 
 async function fetchSentimentData(symbol: string) {
   try {
+    console.log('Fetching sentiment data for:', symbol);
     const response = await fetch(`https://crypto.techrealm.pk/coin/${symbol}`);
     if (!response.ok) {
       throw new Error('Failed to fetch sentiment data');
@@ -62,6 +63,13 @@ function analyzeSentiment(sentimentData: any): {
 
   // Analyze comments from all videos
   Object.values(sentimentData.videos).forEach((video: any) => {
+    // Count title sentiment
+    if (video.title_label === 'buy') buyCount++;
+    else if (video.title_label === 'sell') sellCount++;
+    else othersCount++;
+    totalCount++;
+
+    // Count comment sentiments
     if (video.comments && Array.isArray(video.comments)) {
       video.comments.forEach((comment: any) => {
         if (comment.indicator === 'buy') buyCount++;
