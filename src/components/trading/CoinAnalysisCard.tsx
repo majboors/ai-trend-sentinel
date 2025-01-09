@@ -16,9 +16,17 @@ interface CoinAnalysisCardProps {
   onBuy: () => void;
   currentIndex: number;
   total: number;
+  tradeViewId?: string;
 }
 
-export function CoinAnalysisCard({ coin, onNext, onBuy, currentIndex, total }: CoinAnalysisCardProps) {
+export function CoinAnalysisCard({ 
+  coin, 
+  onNext, 
+  onBuy, 
+  currentIndex, 
+  total,
+  tradeViewId 
+}: CoinAnalysisCardProps) {
   const { toast } = useToast();
   const [isStrategyLoading, setIsStrategyLoading] = useState(true);
   const [currentStrategy, setCurrentStrategy] = useState<Strategy>(coin.strategy);
@@ -78,6 +86,7 @@ export function CoinAnalysisCard({ coin, onNext, onBuy, currentIndex, total }: C
                 <NotificationControls 
                   coin={coin.symbol}
                   currentPrice={parseFloat(coin.lastPrice.toString())}
+                  tradeViewId={tradeViewId}
                 />
                 <Button
                   variant="outline"

@@ -217,6 +217,7 @@ export function TradingSuggestions() {
             onBuy={handleBuy}
             currentIndex={tradeView.currentIndex}
             total={coins.length}
+            tradeViewId={tradeView.id}
           />
         )
       )}

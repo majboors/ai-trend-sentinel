@@ -238,6 +238,47 @@ export type Database = {
         }
         Relationships: []
       }
+      trade_notifications: {
+        Row: {
+          coin_symbol: string
+          created_at: string | null
+          high_price: number | null
+          id: string
+          low_price: number | null
+          trade_view_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          coin_symbol: string
+          created_at?: string | null
+          high_price?: number | null
+          id?: string
+          low_price?: number | null
+          trade_view_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          coin_symbol?: string
+          created_at?: string | null
+          high_price?: number | null
+          id?: string
+          low_price?: number | null
+          trade_view_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trade_notifications_trade_view_id_fkey"
+            columns: ["trade_view_id"]
+            isOneToOne: false
+            referencedRelation: "trade_views"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trade_views: {
         Row: {
           created_at: string | null
