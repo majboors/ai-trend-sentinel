@@ -17,20 +17,19 @@ import Leverage from "@/pages/Leverage";
 import CoinSentiment from "@/pages/CoinSentiment";
 import "./App.css";
 
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 1,
-    },
-  },
-});
-
 function App() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        retry: 1,
+      },
+    },
+  });
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/coins" element={<AllCoins />} />
@@ -48,8 +47,8 @@ function App() {
           <Route path="/leverage" element={<Leverage />} />
         </Routes>
         <Toaster />
-      </BrowserRouter>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </BrowserRouter>
   );
 }
 
