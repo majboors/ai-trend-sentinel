@@ -11,6 +11,7 @@ import {
   SidebarMenuSubItem,
   SidebarMenuSubButton,
   SidebarTrigger,
+  SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -132,6 +133,7 @@ export function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarRail />
     </Sidebar>
   );
 }
