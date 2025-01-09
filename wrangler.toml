@@ -7,3 +7,10 @@ command = "bun run build"
 
 [site]
 bucket = "./dist"
+
+# Required for Cloudflare Pages
+[build.upload]
+format = "service-worker"
+
+# Specify the build output directory for Pages
+pages_build_output_dir = "dist"

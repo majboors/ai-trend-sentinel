@@ -9,3 +9,4 @@ frozen = false
 coverage = true
 
 [debug]
+level = "info"
