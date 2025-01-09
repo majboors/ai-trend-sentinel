@@ -7,6 +7,7 @@ import type { CoinData, Strategy } from "./types";
 import { useToast } from "@/components/ui/use-toast";
 import { useState } from "react";
 import { AnalysisProgress } from "./AnalysisProgress";
+import { LiveAnalysisSidebar } from "./analysis/LiveAnalysisSidebar";
 
 interface CoinAnalysisCardProps {
   coin: CoinData;
@@ -34,6 +35,10 @@ export function CoinAnalysisCard({ coin, onNext, onBuy, currentIndex, total }: C
       default:
         return "text-yellow-500";
     }
+  };
+
+  const toggleLiveAnalysis = () => {
+    setIsLiveAnalysisOpen(!isLiveAnalysisOpen);
   };
 
   return (
@@ -72,7 +77,7 @@ export function CoinAnalysisCard({ coin, onNext, onBuy, currentIndex, total }: C
                 <Button
                   variant="outline"
                   className="w-full gap-2"
-                  onClick={() => setIsLiveAnalysisOpen(!isLiveAnalysisOpen)}
+                  onClick={toggleLiveAnalysis}
                 >
                   <LineChart className="h-4 w-4" />
                   Live Analysis
@@ -137,6 +142,12 @@ export function CoinAnalysisCard({ coin, onNext, onBuy, currentIndex, total }: C
           </div>
         </Card>
       </div>
+
+      <LiveAnalysisSidebar 
+        isOpen={isLiveAnalysisOpen} 
+        onClose={toggleLiveAnalysis}
+        currentCoin={coin.symbol}
+      />
     </div>
   );
 }
