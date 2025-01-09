@@ -2,34 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { CoinData, Coin, Strategy } from "../types";
 
-function calculateMA(prices: number[], period: number): number {
-  if (prices.length === 0) return 0;
-  const actualPeriod = Math.min(period, prices.length);
-  const relevantPrices = prices.slice(-actualPeriod);
-  return relevantPrices.reduce((a, b) => a + b, 0) / actualPeriod;
-}
-
-function calculateRSI(prices: number[], period: number = 14): number {
-  if (prices.length < period + 1) return 50;
-  
-  let gains = 0;
-  let losses = 0;
-  
-  for (let i = prices.length - period; i < prices.length; i++) {
-    const difference = prices[i] - prices[i - 1];
-    if (difference >= 0) {
-      gains += difference;
-    } else {
-      losses -= difference;
-    }
-  }
-  
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
-  const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-  return 100 - (100 / (1 + rs));
-}
-
 async function fetchSentimentData(symbol: string) {
   try {
     console.log('Fetching sentiment data for:', symbol);
@@ -88,7 +60,7 @@ function analyzeSentiment(sentimentData: any): {
   } else if (positive > 20) {
     strategy = "buy";
   } else if (negative > 10) {
-    strategy = "sell";
+    strategy = "do not buy";
   } else {
     strategy = "hold";
   }
@@ -117,7 +89,7 @@ export function useCoinData() {
         const options: BinancePairsOptions = {
           includeKlines: true,
           interval: '1h',
-          limit: '100'  // Changed from number to string to match expected type
+          limit: '100'
         };
 
         const response = await supabase.functions.invoke('fetch-binance-pairs', {
@@ -129,7 +101,7 @@ export function useCoinData() {
 
         if (response.error) {
           console.error('Error fetching coin data:', response.error);
-          throw new Error(response.error.message);
+          throw response.error;
         }
 
         if (!response.data || !Array.isArray(response.data)) {
@@ -147,24 +119,13 @@ export function useCoinData() {
               .filter((k: any) => k && k.close)
               .map((k: any) => parseFloat(k.close));
 
-            const rsi = calculateRSI(prices);
-            const ma7 = calculateMA(prices, 7);
-            const ma25 = calculateMA(prices, 25);
-            const ma99 = calculateMA(prices, 99);
-
             return {
               ...coinData,
               price: parseFloat(coinData.lastPrice),
               priceChange: coinData.priceChangePercent,
               strategy,
-              analysis: `${strategy.toUpperCase()} - RSI: ${Math.round(rsi)}`,
+              analysis: `${strategy.toUpperCase()} - RSI: ${Math.round(coinData.indicators.rsi)}`,
               sentiment,
-              indicators: {
-                rsi,
-                ma7,
-                ma25,
-                ma99,
-              },
             };
           })
         );
