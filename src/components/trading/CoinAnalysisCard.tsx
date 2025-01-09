@@ -39,41 +39,46 @@ export function CoinAnalysisCard({ coin, onNext, onBuy, currentIndex, total }: C
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Top Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <Card className="p-6 bg-card/50 backdrop-blur-sm border-white/10">
-          <div className="flex justify-between items-start">
-            <div className="space-y-1">
-              <h2 className="text-2xl font-bold tracking-tight">
-                {coin.baseAsset}/{coin.quoteAsset}
-              </h2>
-              <p className="text-muted-foreground">{coin.symbol}</p>
+          <div className="space-y-6">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-bold tracking-tight">
+                  {coin.baseAsset}/{coin.quoteAsset}
+                </h2>
+                <p className="text-muted-foreground">{coin.symbol}</p>
+              </div>
+              <div className="text-right space-y-1">
+                <p className="text-xl font-semibold tracking-tight">
+                  ${parseFloat(coin.lastPrice.toString()).toLocaleString()}
+                </p>
+                <p className={`flex items-center justify-end gap-1 ${
+                  coin.priceChangePercent >= 0 ? 'text-green-500' : 'text-red-500'
+                }`}>
+                  {coin.priceChangePercent >= 0 ? (
+                    <TrendingUp className="w-4 h-4" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4" />
+                  )}
+                  {coin.priceChangePercent.toFixed(2)}%
+                </p>
+              </div>
             </div>
-            <div className="text-right space-y-1">
-              <p className="text-xl font-semibold tracking-tight">
-                ${parseFloat(coin.lastPrice.toString()).toLocaleString()}
-              </p>
-              <p className={`flex items-center justify-end gap-1 ${
-                coin.priceChangePercent >= 0 ? 'text-green-500' : 'text-red-500'
-              }`}>
-                {coin.priceChangePercent >= 0 ? (
-                  <TrendingUp className="w-4 h-4" />
-                ) : (
-                  <TrendingDown className="w-4 h-4" />
-                )}
-                {coin.priceChangePercent.toFixed(2)}%
-              </p>
-            </div>
-          </div>
-          <div className="mt-4 space-y-4">
-            <AnalysisProgress currentIndex={currentIndex} total={total} />
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => setIsLiveAnalysisOpen(!isLiveAnalysisOpen)}
-            >
-              <LineChart className="h-4 w-4" />
-              Live Analysis
-            </Button>
+
+            <Card className="bg-card/30 p-4 border-white/5">
+              <div className="space-y-4">
+                <AnalysisProgress currentIndex={currentIndex} total={total} />
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => setIsLiveAnalysisOpen(!isLiveAnalysisOpen)}
+                >
+                  <LineChart className="h-4 w-4" />
+                  Live Analysis
+                </Button>
+              </div>
+            </Card>
           </div>
         </Card>
       </div>
