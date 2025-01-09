@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ArrowRight, LineChart, TrendingUp, TrendingDown } from "lucide-react";
 import { MarketSentiment } from "@/components/dashboard/MarketSentiment";
 import { CoinChart } from "./CoinChart";
@@ -34,6 +35,7 @@ export function CoinAnalysisCard({
   const [isStrategyLoading, setIsStrategyLoading] = useState(true);
   const [currentStrategy, setCurrentStrategy] = useState<Strategy>(coin.strategy);
   const [isLiveAnalysisOpen, setIsLiveAnalysisOpen] = useState(false);
+  const [isBuyDialogOpen, setIsBuyDialogOpen] = useState(false);
 
   const getStrategyColor = (strategy: Strategy): string => {
     switch (strategy) {
@@ -51,6 +53,15 @@ export function CoinAnalysisCard({
 
   const toggleLiveAnalysis = () => {
     setIsLiveAnalysisOpen(!isLiveAnalysisOpen);
+  };
+
+  const handleBuyClick = () => {
+    setIsBuyDialogOpen(true);
+  };
+
+  const handleBuyComplete = () => {
+    setIsBuyDialogOpen(false);
+    onBuy();
   };
 
   return (
@@ -108,12 +119,6 @@ export function CoinAnalysisCard({
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <CoinChart coin={coin} />
-        <BuyOrderForm
-          symbol={coin.symbol}
-          currentPrice={parseFloat(coin.lastPrice.toString())}
-          availableAssets={availableAssets}
-          onSuccess={onBuy}
-        />
       </div>
 
       {/* Market Sentiment and Strategy Section */}
@@ -147,7 +152,7 @@ export function CoinAnalysisCard({
             <div className="flex justify-end gap-3 pt-4">
               {!isStrategyLoading && currentStrategy === "buy" && (
                 <Button 
-                  onClick={onBuy} 
+                  onClick={handleBuyClick} 
                   variant="default"
                   className="px-6"
                 >
@@ -165,6 +170,17 @@ export function CoinAnalysisCard({
           </div>
         </Card>
       </div>
+
+      <Dialog open={isBuyDialogOpen} onOpenChange={setIsBuyDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <BuyOrderForm
+            symbol={coin.symbol}
+            currentPrice={parseFloat(coin.lastPrice.toString())}
+            availableAssets={availableAssets}
+            onSuccess={handleBuyComplete}
+          />
+        </DialogContent>
+      </Dialog>
 
       <LiveAnalysisSidebar 
         isOpen={isLiveAnalysisOpen} 
