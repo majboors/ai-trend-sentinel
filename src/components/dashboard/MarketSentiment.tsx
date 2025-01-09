@@ -66,7 +66,10 @@ export function MarketSentiment({ onSentimentChange, selectedCoin }: MarketSenti
     const fetchSentimentData = async () => {
       if (!currentCoin || currentCoin === "market") {
         setSentimentData(defaultSentimentData);
-        setDataFetched(true);
+        // Add a small delay to ensure UI updates
+        setTimeout(() => {
+          setDataFetched(true);
+        }, 500);
         return;
       }
       
@@ -95,10 +98,10 @@ export function MarketSentiment({ onSentimentChange, selectedCoin }: MarketSenti
         setSentimentData(defaultSentimentData);
       } finally {
         setLoading(false);
-        // Only set dataFetched to true after a small delay to ensure graph rendering
+        // Add a small delay to ensure graph rendering
         setTimeout(() => {
           setDataFetched(true);
-        }, 500);
+        }, 1000);
       }
     };
 

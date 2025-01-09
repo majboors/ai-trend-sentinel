@@ -5,6 +5,7 @@ import { MarketSentiment } from "@/components/dashboard/MarketSentiment";
 import { CoinChart } from "./CoinChart";
 import type { CoinData, Strategy } from "./types";
 import { useToast } from "@/components/ui/use-toast";
+import { useState } from "react";
 
 interface CoinAnalysisCardProps {
   coin: CoinData;
@@ -14,33 +15,21 @@ interface CoinAnalysisCardProps {
 
 export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps) {
   const { toast } = useToast();
+  const [isStrategyLoading, setIsStrategyLoading] = useState(true);
+  const [currentStrategy, setCurrentStrategy] = useState<Strategy>(coin.strategy);
 
-  const determineStrategy = (sentimentData: any): Strategy => {
-    if (!sentimentData || !Array.isArray(sentimentData)) {
-      return coin.strategy;
+  // Extract base asset from symbol (e.g., "APT" from "APT/JPY")
+  const extractBaseAsset = (symbol: string): string => {
+    const baseAsset = symbol.split('/')[0];
+    if (!baseAsset) {
+      toast({
+        title: "Error",
+        description: "Could not extract base asset from symbol",
+        variant: "destructive",
+      });
+      return symbol;
     }
-
-    const neutral = sentimentData.find(s => s.type === "Neutral")?.value || 0;
-    const positive = sentimentData.find(s => s.type === "Positive")?.value || 0;
-    const negative = sentimentData.find(s => s.type === "Negative")?.value || 0;
-
-    // First priority: Check neutral sentiment
-    if (neutral > 50) {
-      return "COIN IS DEAD";
-    }
-    
-    // Second priority: Check positive sentiment
-    if (positive > 20) {
-      return "buy";
-    }
-    
-    // Third priority: Check negative sentiment
-    if (negative > 10) {
-      return "do not buy";
-    }
-
-    // If none of the conditions are met
-    return "hold";
+    return baseAsset;
   };
 
   const getStrategyColor = (strategy: Strategy): string => {
@@ -55,20 +44,6 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
       default:
         return "text-yellow-500";
     }
-  };
-
-  // Extract base asset from symbol (e.g., "APT" from "APT/JPY")
-  const extractBaseAsset = (symbol: string): string => {
-    const baseAsset = symbol.split('/')[0];
-    if (!baseAsset) {
-      toast({
-        title: "Error",
-        description: "Could not extract base asset from symbol",
-        variant: "destructive",
-      });
-      return symbol;
-    }
-    return baseAsset;
   };
 
   return (
@@ -103,9 +78,10 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
         <MarketSentiment 
           selectedCoin={extractBaseAsset(`${coin.baseAsset}/${coin.quoteAsset}`)}
           onSentimentChange={(sentimentData) => {
-            const newStrategy = determineStrategy(sentimentData);
-            if (newStrategy !== coin.strategy) {
-              coin.strategy = newStrategy;
+            setIsStrategyLoading(false);
+            if (sentimentData[0]?.strategy) {
+              setCurrentStrategy(sentimentData[0].strategy);
+              coin.strategy = sentimentData[0].strategy;
             }
           }}
         />
@@ -113,13 +89,19 @@ export function CoinAnalysisCard({ coin, onNext, onBuy }: CoinAnalysisCardProps)
 
       <div className="space-y-3">
         <h3 className="font-semibold text-lg">Suggested Strategy</h3>
-        <p className={`text-lg font-bold ${getStrategyColor(coin.strategy)}`}>
-          {coin.strategy.toUpperCase()}
-        </p>
+        {isStrategyLoading ? (
+          <p className="text-lg font-bold text-muted-foreground animate-pulse">
+            Loading strategy...
+          </p>
+        ) : (
+          <p className={`text-lg font-bold ${getStrategyColor(currentStrategy)}`}>
+            {currentStrategy.toUpperCase()}
+          </p>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
-        {coin.strategy === "buy" && (
+        {!isStrategyLoading && currentStrategy === "buy" && (
           <Button 
             onClick={onBuy} 
             variant="default"
