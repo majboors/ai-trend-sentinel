@@ -24,27 +24,36 @@ export function NotificationControls({ coin, currentPrice, tradeViewId }: Notifi
     const loadSavedNotifications = async () => {
       if (!tradeViewId) return;
       
-      const { data: notifications, error } = await supabase
-        .from('trade_notifications')
-        .select('*')
-        .eq('trade_view_id', tradeViewId)
-        .eq('coin_symbol', coin)
-        .single();
+      try {
+        const { data: notifications, error } = await supabase
+          .from('trade_notifications')
+          .select('*')
+          .eq('trade_view_id', tradeViewId)
+          .eq('coin_symbol', coin)
+          .maybeSingle();
 
-      if (error) {
-        console.error('Error loading notifications:', error);
-        return;
-      }
+        if (error) {
+          console.error('Error loading notifications:', error);
+          return;
+        }
 
-      if (notifications) {
-        if (notifications.high_price) setHighPrice([notifications.high_price]);
-        if (notifications.low_price) setLowPrice([notifications.low_price]);
-        setShowSliders(true);
+        if (notifications) {
+          if (notifications.high_price) setHighPrice([notifications.high_price]);
+          if (notifications.low_price) setLowPrice([notifications.low_price]);
+          setShowSliders(true);
+        }
+      } catch (error) {
+        console.error('Error in loadSavedNotifications:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load notification settings",
+          variant: "destructive",
+        });
       }
     };
 
     loadSavedNotifications();
-  }, [tradeViewId, coin]);
+  }, [tradeViewId, coin, toast]);
 
   const calculatePercentage = (value: number, basePrice: number) => {
     return ((value - basePrice) / basePrice) * 100;
@@ -71,42 +80,51 @@ export function NotificationControls({ coin, currentPrice, tradeViewId }: Notifi
       return;
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "Please sign in to save notifications",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('trade_notifications')
+        .upsert({
+          user_id: session.user.id,
+          trade_view_id: tradeViewId,
+          coin_symbol: coin,
+          high_price: high,
+          low_price: low,
+        }, {
+          onConflict: 'trade_view_id,coin_symbol'
+        });
+
+      if (error) {
+        console.error('Error saving notification settings:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save notification settings",
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
-        title: "Error",
-        description: "Please sign in to save notifications",
-        variant: "destructive",
+        title: "Success",
+        description: "Notification settings saved",
       });
-      return;
-    }
-
-    const { error } = await supabase
-      .from('trade_notifications')
-      .upsert({
-        user_id: session.user.id,
-        trade_view_id: tradeViewId,
-        coin_symbol: coin,
-        high_price: high,
-        low_price: low,
-      }, {
-        onConflict: 'trade_view_id,coin_symbol'
-      });
-
-    if (error) {
-      console.error('Error saving notification settings:', error);
+    } catch (error) {
+      console.error('Error in saveNotificationSettings:', error);
       toast({
         title: "Error",
         description: "Failed to save notification settings",
         variant: "destructive",
       });
-      return;
     }
-
-    toast({
-      title: "Success",
-      description: "Notification settings saved",
-    });
   };
 
   const handleHighPriceChange = (values: number[]) => {
