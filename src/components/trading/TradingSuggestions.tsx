@@ -6,13 +6,17 @@ import { CoinAnalysisCard } from "./CoinAnalysisCard";
 import { CoinVolatileView } from "@/components/coins/CoinVolatileView";
 import { StartAnalysisButton } from "./StartAnalysisButton";
 import { AnalysisHeader } from "./analysis/AnalysisHeader";
+import { LiveAnalysisSidebar } from "./analysis/LiveAnalysisSidebar";
 import { useCoinData } from "./hooks/useCoinData";
+import { Button } from "@/components/ui/button";
+import { LineChart } from "lucide-react";
 import type { TradeViewState } from "./types";
 
 export function TradingSuggestions() {
   const [started, setStarted] = useState(false);
   const [isTradeNameDialogOpen, setIsTradeNameDialogOpen] = useState(false);
   const [viewType, setViewType] = useState<string>("suggestions");
+  const [isLiveAnalysisOpen, setIsLiveAnalysisOpen] = useState(false);
   const { toast } = useToast();
   
   const [tradeView, setTradeView] = useState<TradeViewState>({
@@ -26,6 +30,10 @@ export function TradingSuggestions() {
 
   const handleStart = () => {
     setIsTradeNameDialogOpen(true);
+  };
+
+  const toggleLiveAnalysis = () => {
+    setIsLiveAnalysisOpen(!isLiveAnalysisOpen);
   };
 
   const handleCreateTradeView = async (name: string) => {
@@ -190,12 +198,22 @@ export function TradingSuggestions() {
 
   return (
     <div className="glass-card p-8 space-y-6">
-      <AnalysisHeader
-        viewType={viewType}
-        onViewTypeChange={setViewType}
-        currentIndex={tradeView.currentIndex}
-        total={coins.length}
-      />
+      <div className="flex items-center justify-between">
+        <AnalysisHeader
+          viewType={viewType}
+          onViewTypeChange={setViewType}
+          currentIndex={tradeView.currentIndex}
+          total={coins.length}
+        />
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={toggleLiveAnalysis}
+        >
+          <LineChart className="h-4 w-4" />
+          Live Analysis
+        </Button>
+      </div>
 
       {viewType === "volatile" ? (
         <CoinVolatileView />
@@ -208,6 +226,8 @@ export function TradingSuggestions() {
           />
         )
       )}
+
+      <LiveAnalysisSidebar isOpen={isLiveAnalysisOpen} />
     </div>
   );
 }
