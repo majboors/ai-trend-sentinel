@@ -150,15 +150,13 @@ export function CoinAnalysisCard({
             )}
 
             <div className="flex justify-end gap-3 pt-4">
-              {!isStrategyLoading && currentStrategy === "buy" && (
-                <Button 
-                  onClick={handleBuyClick} 
-                  variant="default"
-                  className="px-6"
-                >
-                  Buy Now
-                </Button>
-              )}
+              <Button 
+                onClick={handleBuyClick} 
+                variant="default"
+                className="px-6"
+              >
+                Buy Now
+              </Button>
               <Button 
                 onClick={onNext} 
                 variant="outline" 
