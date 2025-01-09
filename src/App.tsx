@@ -11,6 +11,7 @@ import PredictionSettings from "@/pages/PredictionSettings";
 import TradingBought from "@/pages/TradingBought";
 import TradingSold from "@/pages/TradingSold";
 import TradingVolatile from "@/pages/TradingVolatile";
+import AllTrades from "@/pages/AllTrades";
 import Assets from "@/pages/Assets";
 import SpentProfits from "@/pages/SpentProfits";
 import Leverage from "@/pages/Leverage";
@@ -40,6 +41,7 @@ function App() {
           <Route path="/predictions/profits" element={<ProfitPredictions />} />
           <Route path="/predictions/losses" element={<LossPredictions />} />
           <Route path="/predictions/settings" element={<PredictionSettings />} />
+          <Route path="/trading" element={<AllTrades />} />
           <Route path="/trading/bought" element={<TradingBought />} />
           <Route path="/trading/sold" element={<TradingSold />} />
           <Route path="/trading/volatile" element={<TradingVolatile />} />
