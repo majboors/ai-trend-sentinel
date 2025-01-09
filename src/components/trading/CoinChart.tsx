@@ -18,11 +18,9 @@ interface CoinChartProps {
 }
 
 export function CoinChart({ coin }: CoinChartProps) {
-  // Ensure we have valid klines data
   const hasValidKlines = coin?.klines && Array.isArray(coin.klines) && coin.klines.length > 0;
   
   if (!hasValidKlines) {
-    console.log('No valid klines data found:', coin);
     return (
       <Card className="p-4">
         <div className="h-[400px] flex items-center justify-center text-muted-foreground">
@@ -41,7 +39,6 @@ export function CoinChart({ coin }: CoinChartProps) {
     }));
 
   if (chartData.length === 0) {
-    console.log('No valid chart data after processing:', coin.klines);
     return (
       <Card className="p-4">
         <div className="h-[400px] flex items-center justify-center text-muted-foreground">
@@ -52,7 +49,7 @@ export function CoinChart({ coin }: CoinChartProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <>
       <Card className="p-4">
         <h3 className="text-lg font-semibold mb-2">Price Chart</h3>
         <div className="h-[400px]">
@@ -84,6 +81,6 @@ export function CoinChart({ coin }: CoinChartProps) {
       <VolumeChart coin={coin} />
       <IndicatorsChart coin={coin} />
       <RecentTradesChart coin={coin} />
-    </div>
+    </>
   );
 }
