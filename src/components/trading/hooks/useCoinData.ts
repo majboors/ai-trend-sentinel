@@ -30,6 +30,12 @@ function calculateRSI(prices: number[], period: number = 14): number {
   return 100 - (100 / (1 + rs));
 }
 
+interface BinancePairsOptions {
+  includeKlines?: boolean;
+  interval?: string;
+  limit?: string;
+}
+
 export function useCoinData() {
   return useQuery({
     queryKey: ['trading-coins'],
@@ -39,15 +45,18 @@ export function useCoinData() {
         if (!session) throw new Error('No authenticated session found');
 
         console.log('Fetching coin data from Edge Function...');
+        
+        const options: BinancePairsOptions = {
+          includeKlines: true,
+          interval: '1h',
+          limit: '100' // Changed from number to string
+        };
+
         const response = await supabase.functions.invoke('fetch-binance-pairs', {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: {
-            includeKlines: true,
-            interval: '1h',
-            limit: 100 // Increased to get more historical data
-          }
+          body: options
         });
 
         if (response.error) {
@@ -115,20 +124,10 @@ export function useCoinData() {
             ...coin,
             klines,
             indicators: {
-              positive: rsi > 70 ? 100 : rsi > 50 ? 75 : 25,
-              neutral: Math.abs(50 - rsi),
-              negative: rsi < 30 ? 100 : rsi < 50 ? 75 : 25,
               rsi,
-              macd: {
-                macd,
-                signal,
-                histogram
-              },
-              ma: {
-                ma7,
-                ma25,
-                ma99
-              },
+              ma7,
+              ma25,
+              ma99
             },
             strategy: determineStrategy(coin.priceChangePercent),
             marketCap: coin.volume * parseFloat(coin.lastPrice || "0"),
