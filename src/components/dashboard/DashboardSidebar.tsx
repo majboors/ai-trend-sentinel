@@ -10,6 +10,8 @@ import {
   SidebarMenuSub,
   SidebarMenuSubItem,
   SidebarMenuSubButton,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   BarChart3,
@@ -74,8 +76,13 @@ const menuItems = [
 ];
 
 export function DashboardSidebar() {
+  const { toggleSidebar } = useSidebar();
+
   return (
     <Sidebar>
+      <div className="flex items-center p-2">
+        <SidebarTrigger onClick={toggleSidebar} />
+      </div>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
