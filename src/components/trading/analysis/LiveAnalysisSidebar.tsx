@@ -18,25 +18,16 @@ export function LiveAnalysisSidebar({ isOpen, onClose, currentCoin }: LiveAnalys
   };
 
   return (
-    <div
+    <aside
       className={cn(
-        "fixed inset-y-0 right-0 bg-sidebar border-l border-sidebar-border transform transition-all duration-200 ease-in-out z-50 shadow-xl flex flex-col",
+        "fixed inset-y-0 right-0 bg-sidebar transform transition-all duration-200 ease-in-out z-50 shadow-xl flex flex-col",
         isOpen ? "translate-x-0" : "translate-x-full",
-        isFullScreen ? "w-full" : "w-80"
+        isFullScreen ? "w-[calc(100%-16rem)]" : "w-96",
+        "border-l border-sidebar-border"
       )}
-      style={{ 
-        top: 0, 
-        bottom: 0, 
-        paddingTop: 0, 
-        marginTop: 0,
-        height: '100vh',
-        maxHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column'
-      }}
     >
-      <div className="sticky top-0 z-10 bg-sidebar border-b border-sidebar-border">
-        <div className="flex items-center justify-between p-4">
+      <header className="sticky top-0 z-10 bg-sidebar border-b border-sidebar-border px-4 py-3">
+        <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Live Analysis</h3>
           <div className="flex gap-2">
             <Button
@@ -65,16 +56,18 @@ export function LiveAnalysisSidebar({ isOpen, onClose, currentCoin }: LiveAnalys
             </Button>
           </div>
         </div>
-      </div>
-      <div className="flex-1 overflow-y-auto min-h-0">
-        {currentCoin ? (
-          <TwitterFeed coinSymbol={currentCoin} />
-        ) : (
-          <div className="p-4 text-center text-muted-foreground">
-            Select a coin to view tweets
-          </div>
-        )}
-      </div>
-    </div>
+      </header>
+      <main className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto px-4 py-3">
+          {currentCoin ? (
+            <TwitterFeed coinSymbol={currentCoin} />
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              Select a coin to view tweets
+            </div>
+          )}
+        </div>
+      </main>
+    </aside>
   );
 }
