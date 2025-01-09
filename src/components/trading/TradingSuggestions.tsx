@@ -9,7 +9,8 @@ import { AnalysisHeader } from "./analysis/AnalysisHeader";
 import { LiveAnalysisSidebar } from "./analysis/LiveAnalysisSidebar";
 import { useCoinData } from "./hooks/useCoinData";
 import { Button } from "@/components/ui/button";
-import { LineChart } from "lucide-react";
+import { LineChart, Menu } from "lucide-react";
+import { useSidebar } from "@/components/ui/sidebar";
 import type { TradeViewState } from "./types";
 
 export function TradingSuggestions() {
@@ -18,6 +19,7 @@ export function TradingSuggestions() {
   const [viewType, setViewType] = useState<string>("suggestions");
   const [isLiveAnalysisOpen, setIsLiveAnalysisOpen] = useState(false);
   const { toast } = useToast();
+  const { toggleSidebar } = useSidebar();
   
   const [tradeView, setTradeView] = useState<TradeViewState>({
     id: null,
@@ -199,12 +201,21 @@ export function TradingSuggestions() {
   return (
     <div className="glass-card p-8 space-y-6">
       <div className="flex items-center justify-between">
-        <AnalysisHeader
-          viewType={viewType}
-          onViewTypeChange={setViewType}
-          currentIndex={tradeView.currentIndex}
-          total={coins.length}
-        />
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSidebar}
+            className="lg:hidden"
+          >
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Toggle Sidebar</span>
+          </Button>
+          <AnalysisHeader
+            viewType={viewType}
+            onViewTypeChange={setViewType}
+          />
+        </div>
       </div>
 
       {viewType === "volatile" ? (
