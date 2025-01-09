@@ -24,7 +24,16 @@ export function LiveAnalysisSidebar({ isOpen, onClose, currentCoin }: LiveAnalys
         isOpen ? "translate-x-0" : "translate-x-full",
         isFullScreen ? "w-full" : "w-80"
       )}
-      style={{ top: 0, bottom: 0, paddingTop: 0, marginTop: 0 }}
+      style={{ 
+        top: 0, 
+        bottom: 0, 
+        paddingTop: 0, 
+        marginTop: 0,
+        height: '100vh',
+        maxHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
     >
       <div className="sticky top-0 z-10 bg-sidebar border-b border-sidebar-border">
         <div className="flex items-center justify-between p-4">
@@ -57,7 +66,7 @@ export function LiveAnalysisSidebar({ isOpen, onClose, currentCoin }: LiveAnalys
           </div>
         </div>
       </div>
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {currentCoin ? (
           <TwitterFeed coinSymbol={currentCoin} />
         ) : (
