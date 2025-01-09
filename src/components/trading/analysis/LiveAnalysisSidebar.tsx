@@ -1,13 +1,15 @@
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TwitterFeed } from "./TwitterFeed";
 
 interface LiveAnalysisSidebarProps {
   isOpen: boolean;
   onClose?: () => void;
+  currentCoin?: string;
 }
 
-export function LiveAnalysisSidebar({ isOpen, onClose }: LiveAnalysisSidebarProps) {
+export function LiveAnalysisSidebar({ isOpen, onClose, currentCoin }: LiveAnalysisSidebarProps) {
   return (
     <div
       className={cn(
@@ -29,11 +31,14 @@ export function LiveAnalysisSidebar({ isOpen, onClose }: LiveAnalysisSidebarProp
             <span className="sr-only">Close sidebar</span>
           </Button>
         </div>
-        <div className="flex-1 p-4 overflow-auto">
-          <div className="space-y-4">
-            {/* Add your live analysis content here */}
-            <p className="text-muted-foreground">Real-time market data and analysis will appear here...</p>
-          </div>
+        <div className="flex-1 overflow-auto">
+          {currentCoin ? (
+            <TwitterFeed coinSymbol={currentCoin} />
+          ) : (
+            <div className="p-4 text-center text-muted-foreground">
+              Select a coin to view tweets
+            </div>
+          )}
         </div>
       </div>
     </div>

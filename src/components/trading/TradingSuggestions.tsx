@@ -208,7 +208,7 @@ export function TradingSuggestions() {
         <Button
           variant="outline"
           className="gap-2"
-          onClick={toggleLiveAnalysis}
+          onClick={() => setIsLiveAnalysisOpen(!isLiveAnalysisOpen)}
         >
           <LineChart className="h-4 w-4" />
           Live Analysis
@@ -230,6 +230,7 @@ export function TradingSuggestions() {
       <LiveAnalysisSidebar 
         isOpen={isLiveAnalysisOpen} 
         onClose={() => setIsLiveAnalysisOpen(false)}
+        currentCoin={currentCoin?.symbol}
       />
     </div>
   );
