@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
+import { IpDisplay } from "./IpDisplay";
 
 interface StartAnalysisButtonProps {
   onClick: () => void;
@@ -12,6 +13,7 @@ export function StartAnalysisButton({ onClick }: StartAnalysisButtonProps) {
         <h2 className="text-2xl font-semibold text-foreground/90">Start Trading Analysis</h2>
         <p className="text-muted-foreground">Begin analyzing coins for trading opportunities</p>
       </div>
+      <IpDisplay />
       <Button 
         onClick={onClick} 
         size="lg" 

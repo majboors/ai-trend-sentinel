@@ -12,3 +12,6 @@ verify_jwt = true
 
 [functions.fetch-binance-pairs]
 verify_jwt = true
+
+[functions.fetch-ip]
+verify_jwt = false
