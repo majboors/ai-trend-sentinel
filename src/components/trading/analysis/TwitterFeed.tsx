@@ -30,7 +30,16 @@ export function TwitterFeed({ coinSymbol }: TwitterFeedProps) {
       setError(null);
       
       try {
-        const response = await fetch(`https://twitter-api47.p.rapidapi.com/v2/search?query=${encodeURIComponent(coinSymbol)}&type=Top`, {
+        // Format the search query with the coin symbol and current date
+        const today = new Date();
+        const formattedDate = today.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+        const query = `${coinSymbol} ${formattedDate}`;
+        
+        const response = await fetch(`https://twitter-api47.p.rapidapi.com/v2/search?query=${encodeURIComponent(query)}&type=Top`, {
           headers: {
             'x-rapidapi-key': '786537afe1msh93a10609dcf7592p170f93jsn1bebd7133045',
             'x-rapidapi-host': 'twitter-api47.p.rapidapi.com'
@@ -42,22 +51,40 @@ export function TwitterFeed({ coinSymbol }: TwitterFeedProps) {
         }
 
         const data = await response.json();
-        const formattedTweets: Tweet[] = data.tweets?.map((tweet: any) => {
-          const content = tweet.content.itemContent.tweet_results.result;
-          const user = content.core.user_results.result;
-          const legacy = content.legacy;
+        
+        if (!data.tweets || !Array.isArray(data.tweets)) {
+          console.log('No tweets found in response:', data);
+          setTweets([]);
+          return;
+        }
 
-          return {
-            tweet_id: content.rest_id,
-            username: user.legacy.screen_name,
-            name: user.legacy.name,
-            text: legacy.full_text,
-            likes: legacy.favorite_count,
-            retweets: legacy.retweet_count,
-            replies: legacy.reply_count,
-            created_at: legacy.created_at,
-          };
-        }) || [];
+        const formattedTweets: Tweet[] = data.tweets
+          .filter(tweet => {
+            try {
+              // Verify the tweet has all required nested properties
+              return tweet?.content?.itemContent?.tweet_results?.result?.core?.user_results?.result &&
+                     tweet?.content?.itemContent?.tweet_results?.result?.legacy;
+            } catch (e) {
+              console.log('Invalid tweet structure:', tweet);
+              return false;
+            }
+          })
+          .map(tweet => {
+            const content = tweet.content.itemContent.tweet_results.result;
+            const user = content.core.user_results.result;
+            const legacy = content.legacy;
+
+            return {
+              tweet_id: content.rest_id,
+              username: user.legacy.screen_name,
+              name: user.legacy.name,
+              text: legacy.full_text,
+              likes: legacy.favorite_count,
+              retweets: legacy.retweet_count,
+              replies: legacy.reply_count,
+              created_at: legacy.created_at,
+            };
+          });
 
         setTweets(formattedTweets);
       } catch (err) {
