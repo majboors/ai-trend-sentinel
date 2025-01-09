@@ -31,17 +31,6 @@ export interface CoinData {
   }>;
 }
 
-export interface Coin extends CoinData {
-  price: number;
-  priceChange: number;
-  analysis: string;
-  sentiment: {
-    neutral: number;
-    positive: number;
-    negative: number;
-  };
-}
-
 export interface TradeViewState {
   id: string | null;
   currentIndex: number;
