@@ -23,20 +23,28 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
   const { toast } = useToast();
   const [amount, setAmount] = useState<number>(0);
   const [targetProfit, setTargetProfit] = useState<number>(5);
+  const [leverage, setLeverage] = useState<number>(1);
+  const [marketSellPrice, setMarketSellPrice] = useState<number>(currentPrice);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const targetPrice = currentPrice * (1 + targetProfit / 100);
+  const targetPrice = marketSellPrice || (currentPrice * (1 + targetProfit / 100));
   const stopLossPrice = currentPrice - 2 / amount;
 
   const quoteAsset = symbol.replace(/BTC$|USDT$|ETH$/, "");
-  const baseAsset = symbol.includes("USDT") ? "USDT" : symbol.includes("BTC") ? "BTC" : "ETH";
+  const baseAsset = "USDT"; // Always show in USDT
   
   const availableBalance = availableAssets.find(
     asset => asset.symbol === baseAsset
   )?.free || 0;
 
   const maxAmount = availableBalance / currentPrice;
+  const leveragedAmount = amount * leverage;
+  const loanedAmount = leveragedAmount - amount;
+  const depth = (leveragedAmount * currentPrice) / availableBalance;
+
+  const potentialProfit = (targetPrice - currentPrice) * leveragedAmount;
+  const profitPercentage = ((targetPrice - currentPrice) / currentPrice) * 100 * leverage;
 
   const handleSliderChange = (values: number[]) => {
     const percentage = values[0];
@@ -66,9 +74,9 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
           entry_price: currentPrice,
           target_price: targetPrice,
           stop_loss_price: stopLossPrice,
-          amount,
+          amount: leveragedAmount,
           ip_address: ipData.ip,
-          leverage: 1,
+          leverage,
           status: 'pending'
         });
 
@@ -76,7 +84,7 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
 
       toast({
         title: "Order placed successfully",
-        description: `Buy order for ${amount} ${quoteAsset} at ${currentPrice} ${baseAsset}`,
+        description: `Buy order for ${leveragedAmount} ${quoteAsset} at ${currentPrice} ${baseAsset}`,
       });
 
       if (onSuccess) {
@@ -109,7 +117,7 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
           <div className="flex justify-between items-center">
             <Label>Available Balance</Label>
             <span className="text-sm font-medium">
-              {availableBalance.toFixed(8)} {baseAsset}
+              {availableBalance.toFixed(2)} {baseAsset}
             </span>
           </div>
           
@@ -137,31 +145,63 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
               className="mt-2"
             />
             <p className="text-sm text-muted-foreground">
-              Cost: {(amount * currentPrice).toFixed(8)} {baseAsset}
+              Cost: {(amount * currentPrice).toFixed(2)} {baseAsset}
             </p>
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <Label>Target Profit (%)</Label>
-          <Slider
-            value={[targetProfit]}
-            onValueChange={(values) => setTargetProfit(values[0])}
-            min={1}
-            max={100}
-            step={1}
-          />
-          <div className="flex justify-between text-sm">
-            <span>Target Price: {targetPrice.toFixed(8)} {baseAsset}</span>
-            <span>Profit: {(targetPrice * amount - currentPrice * amount).toFixed(8)} {baseAsset}</span>
+          <div className="space-y-2">
+            <Label>Leverage (x)</Label>
+            <Slider
+              value={[leverage]}
+              onValueChange={(values) => setLeverage(values[0])}
+              min={1}
+              max={10}
+              step={1}
+              className="my-4"
+            />
+            <div className="flex justify-between text-sm">
+              <span>Loaned: {(loanedAmount * currentPrice).toFixed(2)} {baseAsset}</span>
+              <span>Depth: {depth.toFixed(2)}x</span>
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <Label>Stop Loss</Label>
-          <p className="text-sm text-muted-foreground">
-            Fixed at $2 loss: {stopLossPrice.toFixed(8)} {baseAsset}
-          </p>
+          <div className="space-y-2">
+            <Label>Market Sell Price ({baseAsset})</Label>
+            <Input
+              type="number"
+              value={marketSellPrice}
+              onChange={(e) => setMarketSellPrice(Number(e.target.value))}
+              min={0}
+              step="0.0001"
+              className="mt-2"
+            />
+            <div className="flex justify-between text-sm">
+              <span>Profit: {potentialProfit.toFixed(2)} {baseAsset}</span>
+              <span>({profitPercentage.toFixed(2)}%)</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Target Profit (%)</Label>
+            <Slider
+              value={[targetProfit]}
+              onValueChange={(values) => setTargetProfit(values[0])}
+              min={1}
+              max={100}
+              step={1}
+            />
+            <div className="flex justify-between text-sm">
+              <span>Target Price: {targetPrice.toFixed(2)} {baseAsset}</span>
+              <span>Profit: {(targetPrice * leveragedAmount - currentPrice * leveragedAmount).toFixed(2)} {baseAsset}</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Stop Loss</Label>
+            <p className="text-sm text-muted-foreground">
+              Fixed at $2 loss: {stopLossPrice.toFixed(2)} {baseAsset}
+            </p>
+          </div>
         </div>
 
         <Button type="submit" className="w-full" disabled={isLoading || amount <= 0}>
