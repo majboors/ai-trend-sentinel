@@ -12,6 +12,8 @@ interface BuyOrderFormProps {
   baseAsset: string;
   quoteAsset: string;
   currentPrice: number;
+  availableAssets?: Array<{ symbol: string; free: number; }>;
+  onSuccess?: () => void;
 }
 
 export function BuyOrderForm({
@@ -19,6 +21,8 @@ export function BuyOrderForm({
   baseAsset,
   quoteAsset,
   currentPrice,
+  availableAssets = [],
+  onSuccess,
 }: BuyOrderFormProps) {
   const { toast } = useToast();
   const [amount, setAmount] = useState(0);
