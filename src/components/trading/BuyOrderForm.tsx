@@ -2,41 +2,34 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 
 interface BuyOrderFormProps {
   symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
   currentPrice: number;
-  availableAssets: {
-    symbol: string;
-    free: number;
-  }[];
-  onSuccess?: () => void;
 }
 
-export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess }: BuyOrderFormProps) {
+export function BuyOrderForm({
+  symbol,
+  baseAsset,
+  quoteAsset,
+  currentPrice,
+}: BuyOrderFormProps) {
   const { toast } = useToast();
-  const [amount, setAmount] = useState<number>(0);
-  const [targetProfit, setTargetProfit] = useState<number>(5);
-  const [leverage, setLeverage] = useState<number>(1);
-  const [marketSellPrice, setMarketSellPrice] = useState<number>(currentPrice);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [amount, setAmount] = useState(0);
+  const [leverage, setLeverage] = useState(1);
+  const [targetPrice, setTargetPrice] = useState(currentPrice);
+  const [loading, setLoading] = useState(false);
 
-  const targetPrice = marketSellPrice || (currentPrice * (1 + targetProfit / 100));
-  const stopLossPrice = currentPrice - 2 / amount;
-
-  const quoteAsset = symbol.replace(/BTC$|USDT$|ETH$/, "");
-  const baseAsset = "USDT"; // Always show in USDT
-  
-  const availableBalance = availableAssets.find(
-    asset => asset.symbol === baseAsset
-  )?.free || 0;
+  // Get available balance
+  const availableBalance = parseFloat(
+    localStorage.getItem(`balance_${quoteAsset}`) || "0"
+  );
 
   const maxAmount = availableBalance / currentPrice;
 
@@ -51,7 +44,7 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
   const leveragedAmount = amount * leverage;
   const loanedAmount = leveragedAmount - amount;
   const depth = (leveragedAmount * currentPrice) / availableBalance;
-
+  
   const potentialProfit = (targetPrice - currentPrice) * leveragedAmount;
   const profitPercentage = ((targetPrice - currentPrice) / currentPrice) * 100 * leverage;
 
@@ -72,94 +65,74 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+    setLoading(true);
 
     try {
-      const { data: ipData, error: ipError } = await supabase.functions.invoke('fetch-ip');
-      if (ipError) throw ipError;
+      const orderDetails = {
+        symbol: symbol,
+        side: "BUY",
+        type: "LIMIT",
+        quantity: amount.toFixed(8),
+        price: currentPrice.toFixed(8),
+        accountType: leverage > 1 ? "margin" : "spot",
+      };
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("You must be logged in to place orders");
-      }
+      const { data: orderResponse, error } = await supabase.functions.invoke(
+        "proxy-orders",
+        {
+          body: JSON.stringify(orderDetails),
+        }
+      );
 
-      const { error: orderError } = await supabase
-        .from('buy_orders')
-        .insert({
-          user_id: session.user.id,
-          symbol,
-          entry_price: currentPrice,
-          target_price: targetPrice,
-          stop_loss_price: stopLossPrice,
-          amount: leveragedAmount,
-          ip_address: ipData.ip,
-          leverage,
-          status: 'pending'
-        });
-
-      if (orderError) throw orderError;
+      if (error) throw error;
 
       toast({
-        title: "Order placed successfully",
-        description: `Buy order for ${leveragedAmount} ${quoteAsset} at ${currentPrice} ${baseAsset}`,
+        title: "Order placed successfully!",
+        description: `Bought ${amount} ${baseAsset} at ${currentPrice} ${quoteAsset}`,
       });
 
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (err: any) {
-      console.error('Error placing order:', err);
-      setError(err.message);
+      // Update local storage balance
+      const newBalance = availableBalance - (amount * currentPrice);
+      localStorage.setItem(`balance_${quoteAsset}`, newBalance.toString());
+
+    } catch (error) {
+      console.error("Error placing order:", error);
       toast({
         title: "Error placing order",
-        description: err.message,
+        description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="p-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
+    <Card className="p-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <Label>Current Price</Label>
             <span className="text-sm font-medium">
-              {currentPrice.toFixed(2)} {baseAsset}
+              {currentPrice.toFixed(2)} {quoteAsset}
             </span>
           </div>
 
           <div className="flex justify-between items-center">
             <Label>Available Balance</Label>
             <span className="text-sm font-medium">
-              {availableBalance.toFixed(2)} {baseAsset}
+              {availableBalance.toFixed(2)} {quoteAsset}
             </span>
           </div>
-          
+
           <div className="space-y-2">
-            <Label>Purchase Amount ({quoteAsset})</Label>
+            <Label>Purchase Amount ({baseAsset})</Label>
             <Slider
-              value={[amount ? (amount / maxAmount) * 100 : 0]}
-              onValueChange={handleSliderChange}
-              min={0}
+              defaultValue={[0]}
               max={100}
               step={1}
-              className="my-4"
+              onValueChange={handleSliderChange}
             />
-            <div className="flex justify-between text-sm">
-              <span>0 {quoteAsset}</span>
-              <span>{maxAmount.toFixed(8)} {quoteAsset}</span>
-            </div>
             <Input
               type="number"
               value={amount}
@@ -168,70 +141,58 @@ export function BuyOrderForm({ symbol, currentPrice, availableAssets, onSuccess 
               step="0.0001"
               className="mt-2"
             />
-            <p className="text-sm text-muted-foreground">
-              Cost: {(amount * currentPrice).toFixed(2)} {baseAsset}
-            </p>
           </div>
 
           <div className="space-y-2">
-            <Label>Leverage (x)</Label>
+            <Label>Leverage (x{leverage})</Label>
             <Slider
-              value={[leverage]}
-              onValueChange={(values) => setLeverage(values[0])}
+              defaultValue={[1]}
               min={1}
               max={10}
               step={1}
-              className="my-4"
+              value={[leverage]}
+              onValueChange={(values) => setLeverage(values[0])}
             />
-            <div className="flex justify-between text-sm">
-              <span>Loaned: {(loanedAmount * currentPrice).toFixed(2)} {baseAsset}</span>
-              <span>Depth: {depth.toFixed(2)}x</span>
-            </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Market Sell Price ({baseAsset})</Label>
+            <Label>Target Sell Price ({quoteAsset})</Label>
             <Input
               type="number"
-              value={marketSellPrice}
-              onChange={(e) => setMarketSellPrice(Number(e.target.value))}
+              value={targetPrice}
+              onChange={(e) => setTargetPrice(Number(e.target.value))}
               min={0}
               step="0.0001"
               className="mt-2"
             />
-            <div className="flex justify-between text-sm">
-              <span>Profit: {potentialProfit.toFixed(2)} {baseAsset}</span>
-              <span>({profitPercentage.toFixed(2)}%)</span>
-            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Target Profit (%)</Label>
-            <Slider
-              value={[targetProfit]}
-              onValueChange={(values) => setTargetProfit(values[0])}
-              min={1}
-              max={100}
-              step={1}
-            />
-            <div className="flex justify-between text-sm">
-              <span>Target Price: {targetPrice.toFixed(2)} {baseAsset}</span>
-              <span>Profit: {(targetPrice * leveragedAmount - currentPrice * leveragedAmount).toFixed(2)} {baseAsset}</span>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Loaned Amount:</span>
+              <span>{loanedAmount.toFixed(4)} {baseAsset}</span>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Stop Loss</Label>
-            <p className="text-sm text-muted-foreground">
-              Fixed at $2 loss: {stopLossPrice.toFixed(2)} {baseAsset}
-            </p>
+            <div className="flex justify-between">
+              <span>Position Depth:</span>
+              <span>{depth.toFixed(2)}x</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Potential Profit:</span>
+              <span className={potentialProfit >= 0 ? "text-green-500" : "text-red-500"}>
+                {potentialProfit.toFixed(2)} {quoteAsset} ({profitPercentage.toFixed(2)}%)
+              </span>
+            </div>
           </div>
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading || amount <= 0}>
-          {isLoading ? "Placing Order..." : "Place Buy Order"}
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={amount <= 0 || loading}
+        >
+          {loading ? "Placing Order..." : "Place Buy Order"}
         </Button>
       </form>
-    </div>
+    </Card>
   );
 }
