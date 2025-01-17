@@ -125,14 +125,35 @@ export function TradingSuggestions() {
     if (!tradeView.id || !currentCoin) return;
 
     try {
-      await supabase
+      // First check if a record already exists
+      const { data: existingRecord } = await supabase
         .from('coin_indicators')
-        .insert([{
-          trade_view_id: tradeView.id,
-          coin_symbol: currentCoin.symbol,
-          sentiment: currentCoin.strategy,
-          indicators: currentCoin.indicators,
-        }]);
+        .select()
+        .eq('trade_view_id', tradeView.id)
+        .eq('coin_symbol', currentCoin.symbol)
+        .maybeSingle();
+
+      if (existingRecord) {
+        // Update existing record
+        await supabase
+          .from('coin_indicators')
+          .update({
+            sentiment: currentCoin.strategy,
+            indicators: currentCoin.indicators,
+          })
+          .eq('trade_view_id', tradeView.id)
+          .eq('coin_symbol', currentCoin.symbol);
+      } else {
+        // Insert new record
+        await supabase
+          .from('coin_indicators')
+          .insert([{
+            trade_view_id: tradeView.id,
+            coin_symbol: currentCoin.symbol,
+            sentiment: currentCoin.strategy,
+            indicators: currentCoin.indicators,
+          }]);
+      }
 
       if (tradeView.currentIndex < coins.length - 1) {
         setTradeView(prev => ({
