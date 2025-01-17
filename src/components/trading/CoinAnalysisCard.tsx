@@ -173,6 +173,8 @@ export function CoinAnalysisCard({
         <DialogContent className="sm:max-w-[425px]">
           <BuyOrderForm
             symbol={coin.symbol}
+            baseAsset={coin.baseAsset}
+            quoteAsset={coin.quoteAsset}
             currentPrice={parseFloat(coin.lastPrice.toString())}
             availableAssets={availableAssets}
             onSuccess={handleBuyComplete}
