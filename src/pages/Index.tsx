@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -11,6 +12,7 @@ import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import {
   Dialog,
   DialogContent,
@@ -47,17 +49,22 @@ const Index = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full bg-background transition-colors duration-300">
         <DashboardSidebar />
         <main className="flex-1 p-4 md:p-8">
           <div className="container mx-auto max-w-7xl">
             <div className="flex items-center justify-between mb-6 md:mb-8">
-              <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                Dashboard
+              </h1>
               <div className="flex items-center gap-4">
+                <ThemeToggle />
                 {!session ? (
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button>Sign In</Button>
+                      <Button className="bg-primary/90 hover:bg-primary transition-colors">
+                        Sign In
+                      </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[425px]">
                       <DialogHeader>
@@ -68,8 +75,18 @@ const Index = () => {
                       </DialogHeader>
                       <Auth
                         supabaseClient={supabase}
-                        appearance={{ theme: ThemeSupa }}
-                        theme="light"
+                        appearance={{ 
+                          theme: ThemeSupa,
+                          variables: {
+                            default: {
+                              colors: {
+                                brand: 'hsl(var(--primary))',
+                                brandAccent: 'hsl(var(--primary))',
+                              },
+                            },
+                          },
+                        }}
+                        theme="default"
                         providers={[]}
                       />
                     </DialogContent>
@@ -92,7 +109,7 @@ const Index = () => {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8 animate-fade-in">
               <ProfitLossCard
                 title="Total Profit/Loss"
                 value={5000}
@@ -116,16 +133,18 @@ const Index = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2 glass-card p-4">
                 <PerformanceChart />
               </div>
-              <div>
+              <div className="glass-card p-4">
                 <MarketSentiment />
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:gap-6">
-              <WhalesActivity />
+              <div className="glass-card p-4">
+                <WhalesActivity />
+              </div>
             </div>
           </div>
         </main>
